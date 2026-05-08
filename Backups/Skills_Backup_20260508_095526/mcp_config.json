@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "genexus": {
+      "command": "D:\\aaProyectos\\Entorno04\\Genexus18MCP\\publish\\GxMcp.Gateway.exe",
+      "args": [],
+      "env": {
+        "GX_CONFIG_PATH": "D:\\aaProyectos\\Entorno04\\Genexus18MCP\\publish\\config.json",
+        "GX_MCP_STDIO": "true"
+      }
+    }
+  }
+}

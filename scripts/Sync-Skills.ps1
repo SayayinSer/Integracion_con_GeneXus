@@ -1,6 +1,7 @@
 
 $localSkills = "d:\aaProyectos\Entorno04\.agents\skills"
 $globalSkills = "$env:USERPROFILE\.gemini\antigravity\skills"
+$mcpConfig = "$env:USERPROFILE\.gemini\antigravity\mcp_config.json"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $backupRoot = "d:\aaProyectos\Entorno04\Backups\Skills_Backup_$timestamp"
 
@@ -18,6 +19,12 @@ robocopy $localSkills (Join-Path $backupRoot "Local") /E /NFL /NDL /NJH /NJS /R:
 # 3. Backup de Global antes de sincronizar
 Write-Host "Realizando Backup de Skills Globales..." -ForegroundColor Gray
 robocopy $globalSkills (Join-Path $backupRoot "Global") /E /NFL /NDL /NJH /NJS /R:0 /W:0
+
+# 4. Backup de Conexiones MCP
+Write-Host "Realizando Backup de Conexiones MCP..." -ForegroundColor Gray
+if (Test-Path $mcpConfig) {
+    Copy-Item $mcpConfig (Join-Path $backupRoot "mcp_config.json") -Force
+}
 
 # 4. Sincronizar: Local -> Global (Copiar nuevas y actualizadas)
 Write-Host "Sincronizando Local -> Global..." -ForegroundColor Yellow

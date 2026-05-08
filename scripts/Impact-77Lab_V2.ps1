@@ -3,7 +3,7 @@
   Impacta los cambios de la Versión 2 (Caja + Zona API) en la KB 77Lab.
 #>
 $KBPath = "D:\Models\77Lab\AngularV1"
-$XPZPath = "d:\aaProyectos\Entorno04\Envio_XPZ\77Lab_Caja_ZonaApi_v2.xpz"
+$XPZPath = "d:\aaProyectos\Entorno04\Envio_XPZ\API_Zonas_V6.xml"
 $PipelineScript = "d:\aaProyectos\Entorno04\.agents\skills\genexus-automation-msbuild\scripts\Invoke-GXPipeline.ps1"
 
 Write-Host "Iniciando Impacto de Versión 2 (77Lab)..." -ForegroundColor Cyan

@@ -17,6 +17,7 @@ Este documento define la capa de orquestación de inteligencia artificial para e
 | **Legacy / LAMP** | `php-mysql-expert`, `lamp-expert` | Legacy Backend Specialist |
 | **Análisis** | `system-analyst-expert` | Quality & Logic Analyst |
 | **Operaciones** | `devops-expert`, `infra-deploy-manager` | Deployment Manager |
+| **Continuidad** | `project-context-vault` | Context & Memory Guardian |
 
 ## 3. Protocolos de Interacción
 ### Flujo A-P-E (Analyze-Plan-Execute)
