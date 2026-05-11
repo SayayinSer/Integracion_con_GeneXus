@@ -131,7 +131,7 @@ function Test-IsUnderProgramFilesX86 {
 function ConvertTo-JsonText {
     param([object]$InputObject)
 
-    return ($InputObject | ConvertTo-Json)
+    return ($InputObject | ConvertTo-Json -Depth 8)
 }
 
 function Write-JsonLog {
@@ -197,7 +197,7 @@ function Invoke-ProbeStage {
     $probeOutput = & $probeScriptPath @probeArgs
     $probeExitCode = $LASTEXITCODE
     $probeJson = ($probeOutput -join [Environment]::NewLine)
-    $probeDiagnostic = $probeJson | ConvertFrom-Json
+    $probeDiagnostic = $probeJson | ConvertFrom-Json -Depth 8
 
     return [ordered]@{
         ExitCode = $probeExitCode
@@ -439,6 +439,7 @@ function Invoke-MsBuildFile {
         $MsBuildFilePath,
         '/nologo',
         '/verbosity:minimal',
+        '/nodeReuse:false',
         '/target:Run'
     )
 

@@ -10,7 +10,7 @@
 
 ## Português (BR)
 
-Este repositório existe para sustentar e operacionalizar skills para agentes dedicadas ao ecossistema `XPZ`/XML de GeneXus, em especial `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export` e `xpz-index-triage`.
+Este repositório existe para sustentar e operacionalizar skills para agentes dedicadas ao ecossistema `XPZ`/XML de GeneXus, em especial `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export`, `xpz-msbuild-build`, `xpz-index-triage` e `xpz-skills-setup`.
 
 A documentação consolidada e os scripts desta raiz funcionam como base metodológica e operacional dessas skills, com foco em:
 
@@ -33,6 +33,7 @@ Além dessa base principal, a raiz também pode conter documentação operaciona
 - `02-regras-operacionais-e-runtime.md`
 - `03-risco-e-decisao-por-tipo.md`
 - `04-webpanel-familias-e-templates.md`
+- `04b-ucw-gxcontroltype-reference.md`: catálogo de User Controls (`gxControlType`) em `GxMultiForm`, tabela de upload por contexto, regras de eventos de UC e SDT `FileUploadData`
 - `05-transaction-familias-e-templates.md`
 - `05b-procedure-relatorio-familias-e-templates.md`
 - `06-padroes-de-objeto-e-nomenclatura.md`
@@ -59,7 +60,9 @@ Guia operacional e metodologico da trilha KB Intelligence. Contratos de fases en
 - `xpz-doc-builder`: geração e recomposição de documentação Markdown a partir do acervo XML e de moldes sanitizados
 - `xpz-kb-parallel-setup`: preparação e validação da estrutura inicial da pasta paralela da KB
 - `xpz-msbuild-import-export`: skill experimental para importação e exportação de `XPZ` via `MSBuild`, com execução sem interface gráfica, parâmetros explícitos, rastreabilidade e gates de segurança
+- `xpz-msbuild-build`: skill para validação de build pós-import via `MSBuild`, com execução sem interface gráfica, classificação de resultado e bloqueio de reorg por padrão
 - `xpz-index-triage`: triagem inicial por índice derivado para orientar a leitura mínima dos XMLs oficiais da KB
+- `xpz-skills-setup`: auditoria e manutenção do registro global das skills XPZ nas ferramentas de agente instaladas na máquina
 
 ### Leitura recomendada para humanos
 
@@ -184,7 +187,7 @@ Se você quer entender a base rapidamente:
 
 ## Español
 
-Este repositorio reúne documentación consolidada sobre análisis estructural de objetos GeneXus a partir de XMLs extraídos de `XPZ`, con foco en skills para agentes dedicadas al ecosistema `XPZ`/XML de GeneXus, en especial `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export` y `xpz-index-triage`.
+Este repositorio reúne documentación consolidada sobre análisis estructural de objetos GeneXus a partir de XMLs extraídos de `XPZ`, con foco en skills para agentes dedicadas al ecosistema `XPZ`/XML de GeneXus, en especial `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export`, `xpz-msbuild-build`, `xpz-index-triage` y `xpz-skills-setup`.
 
 - lectura e interpretación de estructura XML
 - familias estructurales de objetos
@@ -205,6 +208,7 @@ Además de esa base principal, la raíz también puede contener documentación o
 - `02-regras-operacionais-e-runtime.md`
 - `03-risco-e-decisao-por-tipo.md`
 - `04-webpanel-familias-e-templates.md`
+- `04b-ucw-gxcontroltype-reference.md`: catálogo de User Controls (`gxControlType`) en `GxMultiForm`, tabla de carga por contexto, reglas de eventos de UC y SDT `FileUploadData`
 - `05-transaction-familias-e-templates.md`
 - `05b-procedure-relatorio-familias-e-templates.md`
 - `06-padroes-de-objeto-e-nomenclatura.md`
@@ -231,7 +235,9 @@ Guía operacional y metodológica de la trilha KB Intelligence. Los contratos de
 - `xpz-doc-builder`: generación y recomposición de documentación Markdown a partir del acervo XML y de moldes sanitizados
 - `xpz-kb-parallel-setup`: preparación y validación de la estructura inicial de la carpeta paralela de la KB
 - `xpz-msbuild-import-export`: skill experimental para importación y exportación de `XPZ` vía `MSBuild`, con ejecución sin interfaz gráfica, parámetros explícitos, trazabilidad y compuertas de seguridad
+- `xpz-msbuild-build`: skill para validación de build pós-import vía `MSBuild`, con ejecución sin interfaz gráfica, clasificación de resultado y bloqueo de reorg por defecto
 - `xpz-index-triage`: triaje inicial por índice derivado para orientar la lectura mínima de los XML oficiales de la KB
+- `xpz-skills-setup`: auditoría y mantenimiento del registro global de las skills XPZ en las herramientas de agente instaladas en la máquina
 
 ### Lectura recomendada para humanos
 
@@ -356,7 +362,7 @@ Si quieres entender la base rápidamente:
 
 ## English
 
-This repository contains consolidated documentation about structural analysis of GeneXus objects based on XML extracted from `XPZ`, with emphasis on skills for agents dedicated to the `XPZ`/XML ecosystem of GeneXus, especially `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export`, and `xpz-index-triage`.
+This repository contains consolidated documentation about structural analysis of GeneXus objects based on XML extracted from `XPZ`, with emphasis on skills for agents dedicated to the `XPZ`/XML ecosystem of GeneXus, especially `xpz-reader`, `xpz-builder`, `xpz-sync`, `xpz-doc-builder`, `xpz-daemon`, `xpz-kb-parallel-setup`, `xpz-msbuild-import-export`, `xpz-msbuild-build`, `xpz-index-triage`, and `xpz-skills-setup`.
 
 - reading and interpreting XML structure
 - structural object families
@@ -377,6 +383,7 @@ In addition to that main base, the root may also contain complementary operation
 - `02-regras-operacionais-e-runtime.md`
 - `03-risco-e-decisao-por-tipo.md`
 - `04-webpanel-familias-e-templates.md`
+- `04b-ucw-gxcontroltype-reference.md`: catalog of User Controls (`gxControlType`) in `GxMultiForm`, upload-by-context table, UC event rules, and SDT `FileUploadData`
 - `05-transaction-familias-e-templates.md`
 - `05b-procedure-relatorio-familias-e-templates.md`
 - `06-padroes-de-objeto-e-nomenclatura.md`
@@ -403,7 +410,9 @@ Operational and methodological guide for the KB Intelligence workstream. Closed 
 - `xpz-doc-builder`: generation and recomposition of Markdown documentation from the XML archive and sanitized templates
 - `xpz-kb-parallel-setup`: preparation and validation of the initial KB parallel-folder structure
 - `xpz-msbuild-import-export`: experimental skill for `XPZ` import and export via `MSBuild`, with headless execution, explicit parameters, traceability, and safety gates
+- `xpz-msbuild-build`: skill for post-import build validation via `MSBuild`, with headless execution, result classification, and reorg blocked by default
 - `xpz-index-triage`: initial triage through a derived index to guide the minimum reading of the KB official XMLs
+- `xpz-skills-setup`: auditing and maintaining the global registration of XPZ skills in the installed agent tools on the machine
 
 ### Recommended reading for humans
 

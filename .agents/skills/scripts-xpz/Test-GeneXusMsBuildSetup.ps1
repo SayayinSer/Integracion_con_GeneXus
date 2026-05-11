@@ -439,7 +439,7 @@ try {
         strategyTrace = @($script:StrategyTrace)
     }
 
-    $json = $diagnostic | ConvertTo-Json
+    $json = $diagnostic | ConvertTo-Json -Depth 6
 
     if ($logValidation.result -eq 'ok') {
         Write-LogFile -TargetLogPath $logValidation.path -JsonPayload $json
@@ -468,7 +468,7 @@ catch {
         strategyTrace = @($script:StrategyTrace)
     }
 
-    $failureJson = $failure | ConvertTo-Json
+    $failureJson = $failure | ConvertTo-Json -Depth 6
 
     try {
         if (-not [string]::IsNullOrWhiteSpace($resolvedLogPathForFallback)) {

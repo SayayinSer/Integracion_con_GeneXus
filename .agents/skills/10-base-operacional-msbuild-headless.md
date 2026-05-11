@@ -354,24 +354,9 @@ A skill deve ser tratada como operacionalmente apta quando, além da validação
 - janela segura e bem entendida para KBs grandes, sem confundir timeout do invocador com falha do `MSBuild`
 - reabertura e observação posterior na IDE oficial em casos relevantes, sem efeito colateral novo
 
-## Regra De Publicação
+## Síntese Da Fonte Externa Lida
 
-Antes de ler a nova fonte adicional mencionada pelo usuário, este documento serve apenas como plano base.
-
-Nenhuma implementação deve ser promovida para menções nas skills atuais antes de:
-
-- consolidar este processo seguro
-- ler a nova fonte
-- revisar o plano à luz dessa fonte
-- validar empiricamente a trilha proposta
-
-## Seção Reservada Para A Nova Fonte
-
-Quando a nova fonte for apresentada, ela deverá ser incorporada aqui como insumo de revisão do plano, e não como atalho para pular a etapa de validação.
-
-## Síntese Da Fonte Lida Em `C:\Dev\Fork\FBgx18MCP`
-
-A leitura filtrada do repositório `C:\Dev\Fork\FBgx18MCP`, ignorando a arquitetura de `MCP` como solução-alvo desta frente, reforçou o seguinte:
+A leitura filtrada de uma fonte externa de referência, ignorando a arquitetura de `MCP` como solução-alvo desta frente, reforçou o seguinte:
 
 - o caminho mais seguro para automação operacional do GeneXus não é hospedar o SDK em executável arbitrário como base principal
 - `MSBuild` aparece como host suportado e pragmaticamente mais estável para operações sobre a `Knowledge Base`
@@ -401,9 +386,9 @@ Com base nessa leitura, este plano passa a assumir explicitamente que:
 - a skill deve tratar projeto temporário `.msbuild`, parâmetros explícitos, captura de saída e validação de artefatos como elementos centrais do fluxo
 - a skill deve continuar separada das demais skills `xpz-*` como capacidade especializada, sem virar dependência automática
 
-## Aprendizados Metodológicos Da Evolução Recente De `FBgx18MCP`
+## Aprendizados Metodológicos De Fonte Externa
 
-Uma leitura adicional dos commits mais recentes de `FBgx18MCP` não trouxe evidência nova direta sobre `MSBuild` para `XPZ`, mas trouxe padrões metodológicos reaproveitáveis para esta frente:
+Uma leitura adicional de commits recentes de uma fonte externa não trouxe evidência nova direta sobre `MSBuild` para `XPZ`, mas trouxe padrões metodológicos reaproveitáveis para esta frente:
 
 - distinguir claramente alteração apenas encenada em memória de alteração efetivamente persistida e verificada
 - não confiar apenas no sucesso nominal da operação; fazer leitura posterior do estado persistido
@@ -419,6 +404,39 @@ Consequências para esta frente:
 - `exitCode` isolado não deve ser tratado como evidência suficiente de sucesso funcional
 - a fase de verificação deve reler artefatos e estado observável em vez de depender de memória de execução
 - quando houver comportamento tardio ou ambíguo, a estratégia preferida deve ser retry curto com leitura posterior, e não inferência otimista
+
+## Decisões Operacionais Dos Wrappers
+
+### WorkingDirectory Do Start-Process
+
+Todos os wrappers desta frente invocam `MSBuild.exe` via `Start-Process` com `-WorkingDirectory` apontando para o **diretório de artefatos** da execução corrente (`Split-Path -Parent $MsBuildFilePath`), não para o diretório de instalação do GeneXus.
+
+Motivação:
+
+- os arquivos `.msbuild` gerados dinamicamente usam **caminhos absolutos** para todos os recursos críticos: caminho de `Genexus.Tasks.targets`, `KBPath`, `XPZPath` e demais parâmetros; o `MSBuild` não depende do diretório de trabalho para resolver esses caminhos
+- o diretório de artefatos já está sob controle do wrapper: é criado na mesma execução, fica fora da árvore de `Program Files` e é rastreado no diagnóstico JSON como artefato da operação
+- usar o diretório de instalação do GeneXus como `WorkingDirectory` introduziria risco de escrita não intencional nesse local caso uma task interna gravasse arquivos usando caminho relativo ao diretório de trabalho
+
+Consequência prática:
+
+- o `WorkingDirectory` do `Start-Process` não deve ser confundido com o parâmetro `-WorkingDirectory` dos wrappers (que é o diretório informado pelo chamador para artefatos e log)
+- não alterar esse padrão sem evidência empírica concreta de falha causada por ele
+
+### Flags MSBuild: /nodeReuse:false, /m e Verbosidade
+
+**`/nodeReuse:false` — adotado**
+
+Todos os wrappers passam `/nodeReuse:false` ao invocar `MSBuild.exe`. Sem essa flag, o MSBuild pode manter um nó de worker process vivo entre chamadas consecutivas. Como os assemblies GeneXus (`Genexus.MsBuild.Tasks.dll`) são carregados com `Architecture="x86"` dentro desse nó, um processo residual de uma execução anterior pode carregar estado interno de uma KB diferente ou de uma sessão já encerrada. `/nodeReuse:false` garante que cada invocação começa com processo limpo, sem herança de contexto.
+
+O custo operacional é apenas o overhead de subir um novo processo a cada chamada, irrelevante dado o tempo dominante das tasks GeneXus.
+
+**`/m` — descartado**
+
+A flag `/m` habilita build multi-processador. O modelo de arquivo `.msbuild` temporário contém um único target sequencial (`OpenKnowledgeBase → operação → CloseKnowledgeBase`). Não há targets independentes paralelizáveis. `/m` não traz benefício e foi descartado.
+
+**Verbosidade — mantida em `minimal`**
+
+`/verbosity:minimal` mostra mensagens de task e erros/warnings do MSBuild sem poluir o stdout com estrutura interna de targets. `quiet` suprimiria mensagens de alta importância úteis ao diagnóstico; `normal` adicionaria saída de estrutura de targets sem ganho funcional.
 
 ## Restrição De Escopo Sobre GeneXus Server
 
@@ -442,6 +460,7 @@ A leitura da instalação oficial em `C:\Program Files (x86)\GeneXus\GeneXus18`,
   - `Import`
   - `SetActiveVersion`
   - `SetActiveEnvironment`
+  - `CheckKnowledgeBase`
 - essas tasks são carregadas com `Architecture="x86"`
 - a instalação inclui exemplos reais de `.msbuild` usando esse modelo, como:
   - `Genexus.msbuild`
@@ -889,6 +908,97 @@ Restrições de desenho:
 - não esconder fallback, retry ou mudança de estratégia durante a execução
 - não tratar importação real como comportamento padrão
 
+## Achado Empírico Sobre CheckKnowledgeBase
+
+A reflexão do assembly `Genexus.MsBuild.Tasks.dll` confirmou que a task `Genexus.MsBuild.Tasks.CheckKnowledgeBase` expõe publicamente a propriedade `Fix` do tipo `Boolean`.
+
+A bateria de testes executada em mais de 30 KBs (em `C:\KBs`, `C:\Models` e `C:\GxModels`) com `Fix="false"` revelou o seguinte comportamento empírico:
+
+### Estrutura interna do check
+
+A task executa até 7 etapas:
+
+- `Etapa 1`: verifica fragmentação de índices SQL (problema de performance, não inconsistência lógica)
+- `Etapa 2`: Check Model Entity Version
+- `Etapa 3`: verificação de composição de versão de entidade — pode atingir timeout de SQL em KBs com índices altamente fragmentados (~3min08s)
+- `Etapa 4`: verificação de redundância de informação entre `EntityVersionComposition` e `ModelEntityVersion` — onde inconsistências lógicas de objetos aparecem
+- `Etapa 5`: verificação de herança de subtipo
+- `Etapa 6`: redundância de propriedades de `ModelEntityProperty`
+- `Etapa 7`: verificação de enumeradores `LastObjectId` e `LastVersionId`
+
+### Categorias de resultado observadas
+
+- `ExitCode = 0`, sem inconsistências: check completo, KB sem problemas detectados
+- `ExitCode = 0`, com inconsistências: check completo, problemas lógicos detectados no stdout — a task não falha o build mesmo com inconsistências
+- `ExitCode = 1` por timeout na Etapa 3: check parcial por limite de execução SQL (~3min08s fixos); as etapas seguintes ainda rodam e podem detectar inconsistências; `CheckKnowledgeBase falhou` aparece no stdout mas os achados das demais etapas são válidos
+- `ExitCode = 1` por `OpenKnowledgeBase` bloqueado: versão incompatível (`needs conversion`), diretório inválido (`InvalidDirectory`) ou `.mdf` em estado anômalo no SQL Server — o check nunca chegou a rodar
+
+### Regras empíricas para interpretação
+
+- `ExitCode = 0` não basta para afirmar KB limpa — é obrigatório checar o stdout por linhas de inconsistência
+- `ExitCode = 1` não significa KB quebrada — pode ser timeout da Etapa 3 em KB com índices fragmentados; distinguir lendo o stdout em busca de `Tempo Limite de Execução Expirado`
+- quando `Fix` for omitido, a task emite dois warnings informativos mas se comporta igual a `Fix="false"`; o wrapper deve passar `Fix="false"` explicitamente para evitar ruído
+- o warning de extensão ausente (`WebPanelDesigner` / `K2B Object Designer`) pode aparecer no `OpenKnowledgeBase` sem impedir o check de rodar
+
+### Status desta frente
+
+`Test-GeneXusKbConsistency.ps1` implementado em `scripts/Test-GeneXusKbConsistency.ps1`. O wrapper classifica o resultado nas quatro categorias empíricas documentadas (KB consistente, inconsistências detectadas, check parcial por timeout da Etapa 3, KB inacessível) e exige confirmação interativa obrigatória quando `-Fix` é ativado.
+
+### Achado Empírico: Comportamento de Fix="true"
+
+Teste executado em 2026-05-06 na KB `C:\KBs\OnlineShopSS` (GeneXus 18 Up 14), após bateria prévia com `Fix="false"` que havia detectado 8 inconsistências lógicas na Etapa 4. Resultado:
+
+- `ExitCode = 0` — igual ao `Fix="false"` com inconsistências; exitCode isolado não permite distinguir se houve ou não correção
+- Warning emitido no stdout: `Parâmetro "Fix" especificado. Executando verificações e corrigindo problemas.`
+- Tempo total: ~1 minuto (00:01:00.25)
+
+#### Comportamento por etapa com Fix="true"
+
+**Etapa 1** (fragmentação de índices SQL):
+- 39 índices altamente fragmentados detectados e reconstruídos (REBUILD) ou reorganizados (REORGANIZE)
+- Mensagem adicional: `Versão de composição corrigida.`
+- Duração: 1.09s
+- Resumo: `39 problema(s) encontrado(s), 39 corrigido.`
+
+**Etapa 2** (Check Model Entity Version):
+- 0 problemas encontrados, 0 corrigidos
+- Duração: 0.03s
+
+**Etapa 3** (composição de versão de entidade):
+- 0 problemas encontrados, 0 corrigidos
+- Duração: 0.045s
+- **Achado crítico: sem timeout.** Com `Fix="false"`, essa KB havia atingido o timeout de ~3min08s na Etapa 3 por conta dos índices altamente fragmentados. Com `Fix="true"`, a Etapa 1 reconstruiu os índices antes que a Etapa 3 rodasse, eliminando completamente o timeout. Isso confirma a relação causal: fragmentação alta de índices → timeout na Etapa 3; reconstrução dos índices na Etapa 1 → Etapa 3 completa em milissegundos.
+
+**Etapa 4** (redundância lógica entre EntityVersionComposition e ModelEntityVersion):
+- 8 inconsistências detectadas e corrigidas — as mesmas 8 detectadas com `Fix="false"` na KB (`Rules` e `Events` de `Transaction 'Product'`)
+- Cada inconsistência gera agora dois registros no stdout: `Inconsistência encontrada...` seguido de `Parte '...' corrigida.`
+- Duração: 4.26s
+- Resumo: `8 problema(s) encontrado(s), 8 corrigido.`
+
+**Etapa 5** (herança de subtipo):
+- 0 problemas encontrados, 0 corrigidos
+- Duração: 0.46s
+
+**Etapa 6** (redundância de propriedades ModelEntityProperty):
+- Para cada versão da KB, o stdout emite `Verificando problemas de redundância de propriedades na versão X` seguido de `Corrigindo redundâncias de propriedades em todos os objetos na versão X` — independentemente de haver ou não problemas reais
+- `mismatched input ']' expecting 'default'` aparece intercalado nas versões com mais objetos, mesmo padrão lateral observado em outras operações headless; não é novo nem bloqueante
+- Resumo: `0 problema(s) encontrado(s), 0 corrigido.`
+- Duração: 48.58s (a etapa mais demorada desta execução)
+- **Observação:** a mensagem `Corrigindo...` no stdout de Etapa 6 é o nome padrão do processo da etapa, não evidência de correção real; o resumo `0 corrigido` é o dado definitivo
+
+**Etapa 7** (enumeradores LastObjectId e LastVersionId):
+- 0 problemas encontrados, 0 corrigidos
+- Duração: 0.015s
+
+#### Regras empíricas adicionais para Fix="true"
+
+- `ExitCode = 0` com `Fix="true"` não distingue "sem problemas" de "problemas corrigidos"; é obrigatório checar o stdout pelos resumos de cada etapa
+- o warning `Parâmetro "Fix" especificado. Executando verificações e corrigindo problemas.` é o marcador confiável de que `Fix="true"` está ativo; com `Fix="false"`, esse warning não aparece
+- `Fix="true"` na Etapa 1 elimina o timeout da Etapa 3 em execução subsequente da mesma rodada: a reconstrução dos índices SQL em Etapa 1 torna a query de Etapa 3 rápida, quebrando a relação causal de fragmentação → timeout
+- a mensagem `Versão de composição corrigida.` em Etapa 1 aparece quando `Fix="true"` e a etapa efetua alguma reconstrução; ausente com `Fix="false"`
+- nas etapas que corrigem inconsistências lógicas (Etapa 4), cada item gera par de linhas: detecção + confirmação de correção; com `Fix="false"` apenas a linha de detecção aparece
+- a Etapa 6 emite `Corrigindo redundâncias de propriedades em todos os objetos na versão X` para todas as versões, mesmo quando não há problemas reais; esse padrão é o nome interno do processo, não evidência de correção — o resumo `0 corrigido` prevalece
+
 ## Próximo Marco Esperado
 
 O próximo marco já não é provar o mecanismo básico do wrapper. Essa etapa ficou empiricamente validada em múltiplas KBs, inclusive com um caso de grande porte.
@@ -908,3 +1018,36 @@ Classificação mínima que a documentação da skill deve espelhar a partir daq
 - warning estrutural por extensão ausente, como `WebPanelDesigner`/`K2B Object Designer`
 
 Enquanto essa consolidação não estiver totalmente espelhada na skill e nos critérios de uso, o mecanismo central já deve ser tratado como validado, com operação controlada e classificação explícita dos limites remanescentes.
+
+## Achado Empírico Sobre Tasks de Propriedades
+
+Reflexão do assembly `Genexus.MsBuild.Tasks.dll` realizada em 2026-05-07 confirmou a acessibilidade de todas as tasks do domínio de gerenciamento de propriedades.
+
+### Tasks confirmadas e acessíveis
+
+**Get* (leitura segura, sem efeito sobre a KB):**
+
+Todas as 6 tasks do domínio Get confirmadas. Interface comum: `Name` [String] (entrada), `PropertyValue` [String] (saída). Parâmetros de escopo por nível:
+
+- `GetKnowledgeBaseProperty` — sem parâmetro adicional de escopo
+- `GetVersionProperty` — sem parâmetro adicional de escopo
+- `GetEnvironmentProperty` — sem parâmetro adicional de escopo
+- `GetGeneratorProperty` — `Generator` [String] opcional (default "Default")
+- `GetDataStoreProperty` — `DataStore` [String] opcional (default "Default")
+- `GetObjectProperty` — `Object` [String] (nome do objeto, obrigatório)
+
+Todas herdam de `BasePropertyTask` e expõem `CaptureOutput` e `TaskOutput` — o valor de `PropertyValue` pode ser capturado programaticamente via `TaskOutput`.
+
+**SetConfiguration (escrita segura para pré-build):**
+
+`SetConfiguration` confirmado com parâmetro `Configuration` [String]. Valores válidos documentados: `Release`, `Debug`, `Performance Test`. Não faz parte das famílias Set*/Reset* descartadas — é task de configuração de contexto de build, absorvida na skill `xpz-msbuild-build`.
+
+### Tasks descartadas neste domínio
+
+Set*/Reset* nos níveis KB/Version/Environment/Generator/DataStore, `SetObjectProperty`, `ResetObjectProperty`, `SetCredential`, `SetCatalog`, `SetProductInfo` e `SetConversationalFlowsProperty` foram avaliados e descartados. Motivos e condições de reavaliação registrados em `998-ideias-descartadas-e-porque.md`.
+
+### Consequências operacionais
+
+- `Get*Property` pode ser invocado de forma segura como diagnóstico pré-operação; o script `Get-GeneXusKbProperty.ps1` tem interface definida em `xpz-msbuild-import-export/SKILL.md`
+- `SetConfiguration` deve ser emitido apenas mediante instrução explícita do usuário, antes do `BuildAll`, com valor validado
+- nenhuma das tasks Get* foi testada em execução real nesta frente; a confirmação atual é de acessibilidade no assembly, não de comportamento funcional em KB real

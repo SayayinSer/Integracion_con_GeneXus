@@ -27,6 +27,23 @@ Consolidar regras de geracao, clonagem conservadora, materializacao, serializaca
 - `Inferência forte`: certos sinais estruturais do XML permitem falar em risco runtime relativo, desde que a fala seja qualificada e nao prometa comportamento real sem teste.
 - `Hipótese`: quanto mais denso o objeto em `events`, `grid`, `Level`, `AttributeProperties`, `parent`, `pattern` e links contextuais, maior tende a ser a sensibilidade a navegacao, carga de dados e comportamento nao trivial em execucao.
 
+## Niveis de confianca de fonte
+
+Esta base usa quatro niveis de confianca, em ordem decrescente de certeza:
+
+| Nivel | Descricao | Quando usar |
+|-------|-----------|-------------|
+| `Evidência direta` | XML bruto lido diretamente desta base ou de XML oficial da KB alvo na sessao corrente | Afirmacoes sobre estrutura, campos, valores ou comportamento observado |
+| `Inferência forte — evidência de KB externa inspecionada` | XML real lido de outra KB GeneXus (nao desta base), com fonte rastreavel (KB, versao, objeto) | Padrao observado em KB externa pelo agente ou reportado com rastreabilidade; valido para geracao conservadora, mas exige validacao na KB alvo antes de importar |
+| `Inferência forte` | Padrao derivado de recorrencia estatistica ou logica estrutural observada nesta base, sem XML diretamente lido para o caso especifico | Deducoes plausiveis sobre comportamento esperado quando a evidencia direta nao cobre o caso |
+| `Hipótese` | Especulacao baseada em analogia, plausibilidade ou intuicao estrutural, sem evidencia empirica direta ou reportada | Caminhos nao testados, alternativas nao validadas; exige sinalizacao explícita ao usuario |
+
+Regras de uso:
+- Nunca promover `Hipótese` a `Inferência forte` sem evidencia adicional.
+- Nunca promover `Inferência forte` a `Evidência direta` sem XML real lido na sessao corrente.
+- `Inferência forte — evidência de KB externa inspecionada` e nivel valido para operacao pratica; o agente deve declarar a KB de origem, versao e objeto de referencia quando disponivel.
+- Ao registrar no handoff, usar exatamente um dos quatro rotulos acima para cada afirmacao critica.
+
 ## Achados empiricos da trilha experimental via MSBuild
 
 - `Evidência direta`: na instalacao validada nesta frente, a task `Genexus.MsBuild.Tasks.Import` expos publicamente `PreviewMode`, `IncludeItems` e `ExcludeItems`.
@@ -46,6 +63,12 @@ Consolidar regras de geracao, clonagem conservadora, materializacao, serializaca
 - `Evidência direta`: na instalacao validada, a task `Export` expos publicamente `ExportAtTimestamp`, mas chamadas headless com esse parametro falharam dentro da task, enquanto exportacoes equivalentes por `Objects` explicito concluiram com sucesso e geraram o mesmo conjunto de objetos observado no `XPZ` parcial da IDE.
 - `Regra operacional`: ate haver evidencia contraria, a exportacao headless via `MSBuild` nao deve ser tratada como capaz de filtrar objetos por data de modificacao; para exportacao parcial, o caminho validado e fornecer explicitamente a lista de objetos em `Objects`/`ObjectList`.
 - `Regra operacional`: depois que os recortes passarem a funcionar de forma confiavel, erro residual de `Source`, `Specification` ou referencia nao resolvida em objeto importado deve ser tratado como problema de conteudo da KB/`XPZ`, nao como problema de envelope ou do wrapper, salvo evidencia contraria.
+- `Evidência direta`: na KB `FabricaBrasil18` (.Net Environment, GeneXus com instalacao VS2022), a task `SpecifyAll` via MSBuild executou internamente, em sequencia: Database Impact Analysis, geracao de `ReorganizationScript.txt` e `bldReorganization.cs`, **reorganizacao real de banco** (`gxexec bldReorganization.cs`), especificacao, segunda geracao e **eventos pos-build** configurados na KB (`start c:\temp\sino.mp3`, `start cmd /c c:\Dropbox\...\AtualizaDeployFB18.Bat`). O gatilho foi import de atributo com mudanca de tamanho (de 2 para 5). Nenhum parametro explicito de autorizacao de reorg foi passado ao wrapper; o comportamento e intrinsecos a task.
+- `Evidência direta`: na mesma execucao, `SpecifyAll` nao expoe `FailIfReorg` nem equivalente — ao contrario de `BuildAll`; nao e possivel bloquear a reorg via parametro do wrapper quando chamando `SpecifyAll` diretamente.
+- `Regra operacional`: o wrapper `Invoke-GeneXusKbSpecifyGenerate.ps1` deve varrer stdout pelo padrao `Reorganiza` antes de classificar o resultado; se encontrado, o status deve ser `reorg detectada ou executada` e nunca `specify e generate concluidos` ou qualquer classificacao de sucesso sem confirmacao do usuario.
+- `Regra operacional`: stderr nao vazio em execucao headless de `SpecifyAll` (ex.: `attribute component isn't defined`) deve ser registrado como warning e impedir classificacao limpa, independente do exitCode.
+- `Regra operacional`: linhas com `start c:` ou `start cmd` em stdout de execucao MSBuild indicam eventos pos-build configurados na KB que dispararam processos externos; registrar como warning separado, pois esses processos podem incluir deploys automaticos ou outras acoes com efeito colateral fora do escopo da verificacao.
+- `Regra operacional`: quando houver evidencia de import recente de objeto `Attribute:` ou de mudanca declarada de tamanho/tipo/precisao/subtipo de atributo, o agente deve exibir aviso explicito de risco de reorg e exigir confirmacao com a frase `entendo que havera reorg e concordo que prossiga` antes de chamar `Invoke-GeneXusKbSpecifyGenerate.ps1`.
 
 ## Metadado da KB no sync parcial
 
@@ -2159,3 +2182,11 @@ Funcionar como resumo decisório sem esconder os limites da evidência.
 - Hipótese: mesmo com anexos representativos, `WorkWithForWeb` continua entre os tipos mais sensiveis a `pattern`, `parent` transacional e contexto gerado; por isso, casos muito distantes do molde documentado ainda podem pedir paralelo bruto mais proximo
 - Hipótese: as familias `F3` e `F4` de `Transaction` ainda ficam mais seguras com molde bruto comparavel adicional, por terem densidade estrutural maior e ainda nao terem anexo completo proprio
 - Inferência forte: para o envelope externo do XPZ observado, a especificacao desta propria base ja e suficiente para evitar inventar `Objects.xml` isolado ou hierarquia externa sem prova local
+
+## Validacao funcional pos-import: objetos com insumo externo oficial
+
+- `Regra operacional`: quando o XPZ importado contiver objeto que consome insumo externo oficial (planilha, arquivo de dados, configuracao externa), a prova de import nao encerra a frente funcional.
+- `Regra operacional`: o agente deve declarar explicitamente que o import provou que o objeto entrou na KB com a estrutura esperada, mas nao provou que o objeto se comporta corretamente com o insumo real.
+- `Regra operacional`: a confirmacao funcional exige teste com o insumo oficial na versao correta e no formato esperado pelo objeto; esse teste e responsabilidade da frente funcional, nao da trilha de import.
+- `Regra operacional`: essa camada complementa os sub-estados ja definidos na skill `xpz-msbuild-import-export` — em particular `importacao real efetiva provada` — com consciencia explicita do insumo externo como dimensao de validacao separada.
+- `Regra operacional`: ausencia de teste funcional com insumo real nao invalida o sub-estado de import ja declarado; sao camadas independentes.
