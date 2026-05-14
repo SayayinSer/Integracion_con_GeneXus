@@ -1,0 +1,12 @@
+/*
+!/*.md
+!/.gitignore
+!/.gitattributes
+!/.editorconfig
+!/historico/
+!/historico/**
+!/scripts/
+scripts/**/__pycache__/
+scripts/**/*.pyc
+!/xpz-*/
+!/xpz-*/**

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW>
+    <MajorVersion>4</MajorVersion>
+    <MinorVersion>0</MinorVersion>
+    <Build>177934</Build>
+  </KMW>
+  <Objects>
+    <Object fullyQualifiedName="Categoria" guid="1b7a601c-73de-40d7-93da-1860ba7ac10d" name="Categoria" type="1db606f2-af09-4cf9-a3b5-b481519d28f6">
+      <Properties>
+        <Property><Name>idISBUSINESSCOMPONENT</Name><Value>True</Value></Property>
+      </Properties>
+    </Object>
+  </Objects>
+</ExportFile>

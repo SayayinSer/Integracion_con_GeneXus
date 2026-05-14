@@ -1,0 +1,12 @@
+<Project DefaultTargets="ExportZona" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(GX_PROGRAM_DIR)\Genexus.Tasks.targets" />
+  <PropertyGroup>
+    <KBPath Condition="'$(KBPath)' == ''">D:\Models\77Lab\AngularV1</KBPath>
+    <XPZPath Condition="'$(XPZPath)' == ''">d:\aaProyectos\Entorno04\Temp\Zona_Transaction.xml</XPZPath>
+  </PropertyGroup>
+  <Target Name="ExportZona">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    <Export File="$(XPZPath)" Objects="Transaction:Zona" />
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

@@ -1,0 +1,179 @@
+import os
+
+# Configuration
+VERSION = "V7"
+OUTPUT_FILE = f"d:\\aaProyectos\\Entorno04\\Envio_XPZ\\API_Zonas_{VERSION}.xml"
+
+# GUIDs (Same as V6 to avoid duplicate keys if they already partially imported)
+GUIDS = {
+    "Zona_SDT": "f239e898-3ddb-4875-8cb1-a3910985d67f",
+    "Zona_SDT_Level": "26f004f8-ded0-4055-a735-b288fcee94c2",
+    "ZonaListaSDT": "916439bd-ab73-4c7e-a8e2-fa5e7ad00037",
+    "ZonaListaSDT_Level": "9a82f075-0167-49ad-baef-9f8e7b6bd6e2",
+    "Zona_DP": "481855b1-42e5-48e4-bf56-fad8e1fb5a1a",
+    "ZonaLista_DP": "7862d24c-7992-4c42-9419-e779a3fb790a",
+    "Zona_Insertar": "6f48c952-06d1-42c5-9557-46e5e03a2bd5",
+    "Zona_Modificar": "d3c5b8e9-467a-4c2d-98e1-f6a5b4c3d2e1",
+    "Zona_Borrar": "e4d6c9f8-578b-5d3c-a9f2-07b6c5d4e3f2",
+    "API_Zonas": "c7b6a5d4-e3f2-b1a0-9876-543210fedcba"
+}
+
+XML_TEMPLATE = f"""<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW>
+    <MajorVersion>4</MajorVersion>
+    <MinorVersion>0</MinorVersion>
+    <Build>177934</Build>
+  </KMW>
+  <Objects>
+    <!-- Zona_SDT -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['Zona_SDT']}" name="Zona_SDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Zona SDT">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="Zona_SDT">
+          <LevelInfo guid="{GUIDS['Zona_SDT_Level']}" name="Zona_SDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona SDT" user="FACTORIAGX\\Sergio" />
+          <Item guid="7ac63714-69d7-4721-a927-1c1879d37d6b" name="ZonaId" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Codigo" user="FACTORIAGX\\Sergio">
+            <Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="50614d93-1b8b-44de-924e-bd3616169599" name="ZonaNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Nombre" user="FACTORIAGX\\Sergio">
+            <Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaNombre</Value></Property></Properties>
+          </Item>
+          <Item guid="6ec9176b-65be-45e0-9ce4-efbfe9f3ad64" name="ExisteSioNo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Existe Si o No" user="FACTORIAGX\\Sergio">
+            <Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>bas:Boolean</Value></Property></Properties>
+          </Item>
+        </Level>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Zona_SDT</Value></Property></Properties>
+    </Object>
+
+    <!-- ZonaListaSDT -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['ZonaListaSDT']}" name="ZonaListaSDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Zona Lista SDT">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="ZonaListaSDT">
+          <LevelInfo guid="{GUIDS['ZonaListaSDT_Level']}" name="ZonaListaSDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Lista SDT" user="FACTORIAGX\\Sergio">
+            <Properties><Property><Name>AttCollection</Name><Value>True</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="9063f065-4726-4480-88cc-7600ba8b2421" name="ZonaItem" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Item" user="FACTORIAGX\\Sergio">
+            <Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Zona_SDT</Value></Property></Properties>
+          </Item>
+        </Level>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>ZonaListaSDT</Value></Property></Properties>
+    </Object>
+
+    <!-- Zona_DP -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['Zona_DP']}" name="Zona_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="Zona DP">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[Zona_SDT From Zona
+where ZonaCodigo = &ZonaId
+{{
+    ZonaId = ZonaCodigo
+    ZonaNombre = ZonaNombre
+    ExisteSioNo = True
+}}
+Zona_SDT [Default]
+{{
+    ExisteSioNo = False
+}}]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&ZonaId);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ZonaId"><Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="ZonaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Zona_SDT</Value></Property></Properties></Variable>
+      </Part>
+      <Properties>
+        <Property><Name>Name</Name><Value>Zona_DP</Value></Property>
+        <Property><Name>Output</Name><Value>sdt:Zona_SDT</Value></Property>
+      </Properties>
+    </Object>
+
+    <!-- ZonaLista_DP -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['ZonaLista_DP']}" name="ZonaLista_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="Zona Lista DP">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[ZonaListaSDT From Zona
+where ZonaNombre like &ZonaNombre or &ZonaNombre.IsEmpty()
+{{
+    ZonaItem
+    {{
+        ZonaId = ZonaCodigo
+        ZonaNombre = ZonaNombre
+        ExisteSioNo = True
+    }}
+}}]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&ZonaNombre);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ZonaNombre"><Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaNombre</Value></Property></Properties></Variable>
+        <Variable Name="ZonaListaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:ZonaListaSDT</Value></Property></Properties></Variable>
+      </Part>
+      <Properties>
+        <Property><Name>Name</Name><Value>ZonaLista_DP</Value></Property>
+        <Property><Name>Output</Name><Value>sdt:ZonaListaSDT</Value></Property>
+      </Properties>
+    </Object>
+
+    <!-- Zona_Insertar -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['Zona_Insertar']}" name="Zona_Insertar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Insertar Zona">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Zona = new()
+&Zona.ZonaNombre = &ZonaNombre
+if &Zona.Insert()
+    commit
+else
+    rollback
+endif
+&Messages = &Zona.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&ZonaNombre, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ZonaNombre"><Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaNombre</Value></Property></Properties></Variable>
+        <Variable Name="Zona"><Properties><Property><Name>idBasedOn</Name><Value>Transaction:Zona</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Zona_Insertar</Value></Property></Properties>
+    </Object>
+
+    <!-- API_Zonas -->
+    <Object user="FACTORIAGX\\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-08T16:54:30.0000000Z" guid="{GUIDS['API_Zonas']}" name="API_Zonas" type="36e32e2d-023e-4188-95df-d13573bac2e0" description="API Zonas">
+      <Part type="9f577ec2-27f4-4cf4-8ad5-f3f50c9d69b5">
+        <Source><![CDATA[API_Zonas
+{{
+    [Description("Lista todas las Zonas.")]
+    [RestMethod(GET)]
+    Listar(in:&Buscar_ZonaNombre, out:&ZonaListaSDT)
+    => ZonaLista_DP(in:&Buscar_ZonaNombre, out:&ZonaListaSDT);
+
+    [Description("Recupera una Zona por ID.")]
+    [RestMethod(GET)]
+    Buscar(in:&Buscar_ZonaId, out:&ZonaSDT)
+    => Zona_DP(in:&Buscar_ZonaId, out:&ZonaSDT);
+
+    [Description("Inserta una nueva Zona.")]
+    [RestMethod(POST)]
+    Insertar(in:&Buscar_ZonaNombre, out:&Messages)
+    => Zona_Insertar(in:&Buscar_ZonaNombre, out:&Messages);
+}}]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Buscar_ZonaId"><Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Buscar_ZonaNombre"><Properties><Property><Name>idBasedOn</Name><Value>Attribute:ZonaNombre</Value></Property></Properties></Variable>
+        <Variable Name="ZonaListaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:ZonaListaSDT</Value></Property></Properties></Variable>
+        <Variable Name="ZonaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Zona_SDT</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>API_Zonas</Value></Property></Properties>
+    </Object>
+  </Objects>
+</ExportFile>
+"""
+
+# Save with UTF-8-SIG to ensure GeneXus reads it correctly
+with open(OUTPUT_FILE, "w", encoding="utf-8-sig") as f:
+    f.write(XML_TEMPLATE)
+
+print(f"Generated {OUTPUT_FILE} successfully.")

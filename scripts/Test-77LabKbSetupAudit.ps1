@@ -68,14 +68,14 @@ if (-not $MetadataWrapperTestPath) {
 }
 
 if (-not $SourceSanityWrapperPath) {
-    $candidate = Join-Path $PSScriptRoot 'Test-KbSourceSanity.ps1'
+    $candidate = Join-Path $PSScriptRoot 'Test-77LabKbSourceSanity.ps1'
     if (Test-Path -LiteralPath $candidate -PathType Leaf) {
         $SourceSanityWrapperPath = $candidate
     }
 }
 
 if (-not $PackageCollisionWrapperPath) {
-    $candidate = Join-Path $PSScriptRoot 'Test-KbPackageCollision.ps1'
+    $candidate = Join-Path $PSScriptRoot 'Test-77LabKbPackageCollision.ps1'
     if (Test-Path -LiteralPath $candidate -PathType Leaf) {
         $PackageCollisionWrapperPath = $candidate
     }

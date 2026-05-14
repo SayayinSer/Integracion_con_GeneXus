@@ -18,6 +18,8 @@ Também já existe uma implementação inicial de `scripts/Invoke-GeneXusXpzImpo
 
 Esta base não substitui o fluxo oficial atual da trilha paralela da KB, não altera o comportamento das demais skills `xpz-*` e não trata sucesso operacional como evidência suficiente de sucesso funcional.
 
+Este documento é par de `02-regras-operacionais-e-runtime.md`, não downstream dele. Achados empíricos de scripts MSBuild — incompatibilidades de tasks, comportamento verificado de API, evidências de execução em KB real — pertencem aqui. Regras transversais sobre estrutura XPZ/XML e runtime GeneXus pertencem a `02-regras`.
+
 ## Objetivo
 
 Consolidar as diretrizes operacionais, restrições, riscos conhecidos e evidências de validação da skill dedicada à importação e exportação de `XPZ` do GeneXus por automação headless baseada em `MSBuild`, sem depender da operação manual pela IDE.
@@ -598,10 +600,20 @@ Scripts propostos:
   - objetivo: exportar `XPZ` com parâmetros explícitos
 - `Invoke-GeneXusXpzImport.ps1`
   - objetivo: executar importação real apenas em fase já autorizada de teste controlado
+- `Watch-GeneXusMsBuildLog.ps1`
+  - objetivo: monitorar incrementalmente o log de uma execução headless em andamento, sem depender do chat para polling; encerra sozinho quando o processo termina
+  - parâmetros obrigatórios: `-Pid`, `-LogPath`
+  - parâmetros opcionais: `-MonitorLog`, `-IntervalSeconds` (default 5), `-SilenceThresholdSeconds` (default 120)
+- `Test-GeneXusRuntimeFreshness.ps1`
+  - objetivo: diagnosticar se o runtime GeneXus reflete a versão mais recente de um objeto após import+build; somente leitura, não abre KB, não invoca MSBuild
+  - parâmetros obrigatórios: `-KbPath`, `-ObjectName`, `-ImportedAt`
+  - parâmetros opcionais: `-ObjectType` (reservado para uso futuro), `-GeneratorOutputPath` (se omitido, deriva como `<KbPath>\CSharpModel\web`), `-AsJson`
 
 Estado atual da materialização adicional:
 
 - `Invoke-GeneXusXpzExport.ps1`: implementado para exportação headless de `XPZ` com parâmetros explícitos e diagnóstico em `JSON`
+- `Watch-GeneXusMsBuildLog.ps1`: implementado como monitor incremental de execução headless; destaca fases do GeneXus (Open, Specify, Generate, Compile, BuildAll, Reorg, Validating subtype group, Close), detecta silêncio prolongado e encerra sozinho quando o processo termina; exibe contador de silêncio in-place (sem gerar nova linha a cada poll); quando `-MonitorLog` é passado com o mesmo caminho de `-MonitorLogPath` em `Invoke-GeneXusKbBuildAll.ps1`, o JSON de resultado inclui `timing.phases` com duração de cada fase interna; iniciar com `-NoExit` para a janela permanecer aberta após o build
+- `Test-GeneXusRuntimeFreshness.ps1`: implementado como diagnóstico somente leitura de frescor de runtime; verifica `nav_objs.xml` e timestamps dos artefatos gerados; saída JSON com `runtime-fresh`, `runtime-stale` ou `runtime-unknown`
 
 Parâmetros transversais esperados:
 
@@ -1050,4 +1062,15 @@ Set*/Reset* nos níveis KB/Version/Environment/Generator/DataStore, `SetObjectPr
 
 - `Get*Property` pode ser invocado de forma segura como diagnóstico pré-operação; o script `Get-GeneXusKbProperty.ps1` tem interface definida em `xpz-msbuild-import-export/SKILL.md`
 - `SetConfiguration` deve ser emitido apenas mediante instrução explícita do usuário, antes do `BuildAll`, com valor validado
-- nenhuma das tasks Get* foi testada em execução real nesta frente; a confirmação atual é de acessibilidade no assembly, não de comportamento funcional em KB real
+- `GetVersionProperty` e `GetKnowledgeBaseProperty` foram testadas em execução real na KB `wsEducacaoSpTeste` em 2026-05-10; as demais tasks `Get*` permanecem confirmadas apenas por acessibilidade no assembly
+
+### Achado Empírico: Incompatibilidade GetVersionProperty Name vs SetActiveVersion
+
+Testado em execução real em 2026-05-10 na KB `wsEducacaoSpTeste`:
+
+- `GetVersionProperty -Name Name` → `"Design"` (nome descritivo da versão)
+- `GetKnowledgeBaseProperty -Name Name` → `"wsEducacaoSpTeste"` (nome da KB)
+- `SetActiveVersion` com `VersionName="Design"` → falha: `A versão 'Design' não existe`
+- exportação sem `-VersionName` → sucesso; `GetActiveVersion` confirmou `"wsEducacaoSpTeste"` como identificador ativo
+
+Conclusão: `GetVersionProperty -Name Name` retorna propriedade de metadados descritiva da versão, não o identificador aceito por `SetActiveVersion`. Para posicionar versão antes de exportação ou importação, usar `GetActiveVersion` como fonte do identificador — nunca `GetVersionProperty -Name Name`.

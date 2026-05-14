@@ -1,0 +1,12 @@
+<Project DefaultTargets="DeleteOld" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(GX_PROGRAM_DIR)\Genexus.Tasks.targets" />
+  <PropertyGroup>
+    <KBPath Condition="'$(KBPath)' == ''">D:\Models\77Lab\AngularV1</KBPath>
+  </PropertyGroup>
+  <Target Name="DeleteOld">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    <Message Text="Deleting conflicting object 'API_Zona'..." Importance="high" />
+    <DeleteObject ObjectName="API_Zona" ObjectType="API" />
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

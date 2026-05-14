@@ -29,9 +29,11 @@
 
 ## Trabalho nas skills XPZ
 
-- Esta raiz contém a documentação metodológica de múltiplas skills (xpz-reader, xpz-builder, xpz-sync, xpz-doc-builder, xpz-daemon, xpz-kb-parallel-setup, xpz-msbuild-import-export e xpz-index-triage) e outros artefatos compartilhados.
+- Esta raiz contém a documentação metodológica de múltiplas skills (xpz-reader, xpz-builder, xpz-sync, xpz-doc-builder, xpz-daemon, xpz-kb-parallel-setup, xpz-msbuild-import-export, xpz-msbuild-build, xpz-index-triage e xpz-skills-setup) e outros artefatos compartilhados.
 - Ao trabalhar na melhoria de uma skill, estudar sua documentação de forma crítica e compreender seu propósito antes de propor mudanças.
 - Quando receber um prompt de outro agente solicitando mudança em uma skill, não invoque essa skill como ferramenta — consulte sua documentação, analise o impacto e apresente um plano.
+- Ao avaliar mudanças em uma skill, verificar o contexto de uso para o qual ela foi projetada. Exemplo: conteúdo embutido em `xpz-skills-setup` pode parecer desatualizado em relação ao ambiente do mantenedor, mas ser correto para quem está configurando um ambiente do zero — os dois contextos coexistem.
+- Antes de pesquisar uma task, abordagem ou ideia nova relacionada às skills XPZ, consultar `999-ideias-pendentes.md` e `998-ideias-descartadas-e-porque.md`. O que já foi avaliado está registrado lá — não repetir a pesquisa.
 
 ## Edição segura de Markdown
 
@@ -54,3 +56,5 @@
 
 - Responder ao usuário em português, salvo pedido explícito em outro idioma.
 - Quando citar conteúdo técnico originalmente em inglês, traduzir ao explicar sempre que isso melhorar a compreensão.
+- Ao explicar uma decisão ao usuário, traduzir termos conceituais técnicos para português (ex: "gate" → "verificação automática" ou "validação"; "playbook" → "roteiro"; "upstream" → "anterior" ou "que serve de base"; "fingerprint" → "marca de localização"; "manifesto" → "resumo descritivo do pacote"). Manter em inglês apenas nomes próprios — identificadores literais como `xpz-builder`, `who-uses`, `import_file.xml`.
+- Misturar conceitos em inglês sem tradução em diálogo pt-BR aumenta o risco de o usuário não entender. Quando em dúvida, traduzir ou definir na primeira aparição.

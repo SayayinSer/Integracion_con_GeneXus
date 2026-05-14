@@ -50,6 +50,7 @@ If the main need is to prepare or validate the initial folder structure around t
 - Apply risk assessment from [03-risco-e-decisao-por-tipo](../03-risco-e-decisao-por-tipo.md) before proceeding
 - Abort if no comparable structural template exists and risk is high or very high
 - For `WebPanel`, classify the current delta by functional block before editing: `layout`, `events`, `variables`, `serialized functional metadata`, `identity and container`, or `dependencies`
+- For `WebPanel` that includes UCW (`<ucw gxControlType="...">`) in the `GxMultiForm` layout: load [04b-ucw-gxcontroltype-reference.md](../04b-ucw-gxcontroltype-reference.md) before generating or editing the UCW block; never invent `gxControlType` values — use only documented values from that reference
 - For `Transaction`, classify the current delta by functional block before editing: `Transaction structure`, `Attributes and attribute properties`, `Rules`, `Events`, `Execution context`, or `Identity and container`
 - For `Transaction`, when the delta generates or reviews logic that assigns values to attributes accessed from a Transaction's base table, run the writability classification gate before any assignment is generated: classify each `key="False"` attribute in the Level using detection signals in order — `isRedundant="True"` in Level → `extended-parent-fk` (non-writable); `Formula` in its Attribute XML → `formula` (non-writable); SubTypeGroup member mapped to non-key Supertype → `extended-subtype-descriptive` (non-writable); SubTypeGroup member mapped to PK Supertype → `extended-subtype-key` (writable); when no SubTypeGroup covers the attribute, apply the naked-FK test using the Transaction's Table XML: if the attribute appears in a Duplicate index of that Table XML → `extended-fk-key` (writable, FK column stored in this table); otherwise, identify direct FK entities as Transactions whose own `key="True"` PK attribute matches a PK member or Duplicate-index column of this table — read each FK entity's Level and collect its `key="False"` attributes — if the candidate attribute appears in any such collection → `extended-fk-descriptive` (non-writable) — ABORT any assignment to it; for transitive extension, repeat this FK-entity lookup recursively on those FK entities; only if the attribute is absent from all FK entities at all depths → `own-physical` (writable); generating an assignment to a non-writable attribute is a hard error — ABORT; never conclude a Transaction's physical table has "only keys" before verifying that every `key="False"` attribute was classified and confirmed as non-writable
 - For `Procedure`, classify the current delta by functional block before editing: `Source`, `Rules/parm`, `Variables`, `Calls and dependencies`, `Identity and container`, and `Report layout` when applicable
@@ -107,9 +108,9 @@ If the main need is to prepare or validate the initial folder structure around t
 - A phased front is a legitimate pattern when a GeneXus operational limitation makes a safe monolithic package impractical; in that case, splitting the delivery into sequential rounds is part of the methodology, not an ad hoc workaround
 - Classify the package intent explicitly before packaging as exactly one of:
   - `pacote funcional` = objetivo principal e alterar comportamento funcional esperado
-  - `pacote experimental` = objetivo principal e testar serializacao, roundtrip IDE/XPZ, preservacao textual, envelope ou comportamento metodologico do fluxo
-  - `pacote arquitetural` = objetivo principal e reorganizar estrutura, dependencias ou forma de implementacao sem provar sozinho mudanca funcional
-  - `pacote cirurgico` = objetivo principal e corrigir falha localizada ou objeto pontual com delta minimo
+  - `pacote experimental` = objetivo principal e testar serialização, roundtrip IDE/XPZ, preservação textual, envelope ou comportamento metodológico do fluxo
+  - `pacote arquitetural` = objetivo principal e reorganizar estrutura, dependências ou forma de implementação sem provar sozinho mudança funcional
+  - `pacote cirurgico` = objetivo principal e corrigir falha localizada ou objeto pontual com delta mínimo
 - Treat that package-intent classification as mandatory narrative context, not as optional labeling
 - Require a single primary intent per package; if the candidate batch mixes functional change, textual experiment, and architectural adjustment without clear separability, **ABORT** for confirmation or split the package plan before writing
 - For `pacote experimental`, describe the expected proof narrowly and do not imply functional validation unless an external IDE/import/specification step actually covered it
@@ -137,6 +138,7 @@ If the main need is to prepare or validate the initial folder structure around t
 - Ensure all GUIDs are syntactically valid (no text placeholders like `"YOUR-GUID-HERE"`)
 - Validate XML structure before delivery
 - Declare confidence level and limitations explicitly at the end of every output
+- When generating an object for a small or new KB that has no comparable local XML: follow the resource ladder from [08-guia-para-agente-gpt.md](../08-guia-para-agente-gpt.md); if reaching level 2 (best-effort attempt without commitment), declare explicitly which source sustains the generation (`molde sanitizado`, `XML real da KB atual`, `XML real de KB externa inspecionada`, or `hipótese`), signal the confidence level, and require validation before import; if the probability of success is assessed as low, present the options to the user and wait for a decision before generating
 - Keep `WorkWithWeb` noise that is already proven in this trail as non-functional in the manifest, especially `Load Code` in `Selection` and the affected `View` tabs; do not generalize this to unrelated `WorkWithWeb` cases
 - When changing a `Procedure`, run a minimum semantic pre-packaging gate on the `Procedure` itself:
   - declare the primary edit block before touching the XML
@@ -163,6 +165,7 @@ If the main need is to prepare or validate the initial folder structure around t
   - if the current `Source` delta introduces a new helper variable, that variable must exist in the variables section and its declared type must remain coherent with the way it is used
   - if the current `Source` delta introduces a method call on a variable, accept it only when that method is compatible with the declared variable type and is anchored by the methodological base loaded for the case
   - if the current `Source` delta introduces cleanup or reinitialization of a collection, SDT, or `Messages, GeneXus.Common`, accept only patterns anchored by the methodological base for that declared type
+- When declaring a variable as an SDT collection in any object type (`WebPanel`, `Procedure`, `DataProvider`): use `AttCollection=True`; NEVER use `Collection=True` or `IsCollection=True` — both are invalid and will be rejected; this applies to the variable's `<Properties>` block in the XML
   - for collection reinitialization introduced by the current `Source` delta and already covered by the methodological base, prefer `= new()`; do NOT accept unsupported cleanup forms such as `SetEmpty()` only by plausibility or analogy
   - if a period filter is introduced over a `DateTime` field, prefer direct comparison on the `DateTime` column: `>=` start and `<` next day after end
   - treat function on the database column, especially `ToDate()` over the column, as explicit navigation/performance risk
@@ -206,6 +209,8 @@ Reference files and when to load them:
 | [05b-procedure-relatorio-familias-e-templates.md](../05b-procedure-relatorio-familias-e-templates.md) | Target is a simple report `Procedure`, especially F2/F3 covered by `molde pronto` |
 | [07-open-points-e-checklist.md](../07-open-points-e-checklist.md) | Edge cases, provisional decisions, or checklist for new templates |
 | [08-guia-para-agente-gpt.md](../08-guia-para-agente-gpt.md) | Decision formula, precedence rules, materialization rules, refuse conditions |
+| [01j-workwithweb-cdata-padroes.md](../01j-workwithweb-cdata-padroes.md) | When editing CDATA of a `WorkWithForWeb` object — CDATA hierarchy, anchor rules, sanitized examples |
+| [04b-ucw-gxcontroltype-reference.md](../04b-ucw-gxcontroltype-reference.md) | When the target is a `WebPanel` with UCW (`<ucw gxControlType="...">`) — gxControlType catalog, upload context table, event rules, SDT FileUploadData, AttCollection rule |
 | `xpz-index-triage` skill | When a KbIntelligence index is available and locating comparable corpus XMLs or confirming object existence is needed before opening XML files |
 
 ---
@@ -232,13 +237,23 @@ Reference files and when to load them:
      - front folder = `ObjetosGeradosParaImportacaoNaKbNoGenexus\NomeCurto_GUID_YYYYMMDD\`
      - if that front folder already exists for the current front, reuse it
      - that front folder is the active unit of the work front
+4b. Before listing the workspace, declare the round spec for this packaging round:
+   - State explicitly which objects (name + type) are expected in the candidate batch for this round
+   - This declaration must come from the user's intent or the front's declared scope — not from reading the workspace first
+   - If the expected object list is unclear or has not been declared in this conversation → ask the user before proceeding to step 5
+   - Record the declared list as the `round spec` for this round; it is the committed delivery target before the workspace is inspected
+   - The declared round spec is also the authoritative source of `objetos-foco` for any `xpz-sync` invoked in the same session for this front
 5. When the task is packaging, list active XMLs only inside the current front folder and treat them as the candidate batch
+   - After listing, verify that the workspace matches the round spec declared in step 4b:
+     - Object in round spec but absent from workspace → report the gap explicitly; do NOT silently proceed as if the object were already present
+     - Object in workspace but absent from round spec → classify as potential contaminant; do NOT silently absorb into the batch
+   - If workspace and round spec diverge, require explicit reconciliation before continuing to step 6
 6. Before any package write, execute the deterministic collision gate for the intended `FrontPrefix + nn` in `PacotesGeradosParaImportacaoNaKbNoGenexus`:
    - Prefer the local wrapper `Test-*KbPackageCollision.ps1` when the KB/repository publishes it
    - The wrapper should delegate to the shared engine `scripts\Test-XpzPackageCollision.ps1`
    - Expected outputs:
      - `COLLISION_OK`
-     - `BLOCK: _nn ja existe para o front X, proximo livre: _mm`
+     - `BLOCK: _nn já existe para o front X, próximo livre: _mm`
    - If the gate blocks, **ABORT** packaging before any `Set-Content`, rename, move, or overwrite of the package artifact
 7. Classify the package intent before packaging and record it in the conversation/manifests:
    - `pacote funcional`
@@ -246,7 +261,7 @@ Reference files and when to load them:
    - `pacote arquitetural`
    - `pacote cirurgico`
    - if the candidate batch does not have one dominant primary intent, **ABORT** and require split or explicit confirmation before packaging
-   - if the case is `pacote experimental`, state the bounded proof target explicitly, such as `serializacao`, `roundtrip IDE/XPZ`, `preservacao textual`, or `envelope/importacao`
+   - if the case is `pacote experimental`, state the bounded proof target explicitly, such as `serialização`, `roundtrip IDE/XPZ`, `preservação textual`, or `envelope/importação`
    - if the case is `pacote experimental`, do NOT narrate the package as if it already proved business behavior
 8. Evaluate batch isolation before packaging:
    - If more than one plausible batch is present inside the current front folder → **ABORT**
@@ -344,7 +359,7 @@ Reference files and when to load them:
    - Simple report `Procedure` → use the canonical sanitized family from [05b-procedure-relatorio-familias-e-templates](../05b-procedure-relatorio-familias-e-templates.md) first when the case fits simple F2/F3 coverage and the selected block is marked as `molde pronto`
    - Other types → use sanitized representative from [08-guia-para-agente-gpt](../08-guia-para-agente-gpt.md) materialization rules
    - For simple report `Procedure`, escalate to comparable real XML only when the request falls outside the documented simple family, when the initial attempt plus one short structural corrective attempt already failed, or when KB-local dialect/localism appears
-   - For simple report `Procedure`, every output or handoff must label the basis used as exactly one of: `molde sanitizado`, `XML real da KB atual`, `XML real de outra KB`, or `hipotese`
+   - For simple report `Procedure`, every output or handoff must label the basis used as exactly one of: `molde sanitizado`, `XML real da KB atual`, `XML real de outra KB`, or `hipótese`
    - If the object has already returned from the KB via official XPZ processing, prefer the current XML in the official corpus over any older delta/import working copy when selecting the base for a new change
    - Before cloning identity fields, classify the container from comparable corpus XML using `Object/@parentType` — never from the directory name in `ObjetosDaKbEmXml`, which varies across KBs:
      - `00000000-0000-0000-0000-000000000008` = Module/Folder (user-created container; GeneXus IDE shows "Module/Folder: X" in Properties)
@@ -450,7 +465,9 @@ Reference files and when to load them:
    - Produce or validate a manifest in the conversation containing at minimum: batch front or short description, batch origin, total XML count, `Objects` count, `Attributes` count, included files list or summary, `lastUpdate` applied or preserved, generated package, superseded package when present, and risk/pending notes
    - Save that manifest as a file only when there is an incident involving `ObjetosDaKbEmXml`, package supersession that needs local traceability, explicit user request, or real need for future handoff outside the immediate conversation
    - Validate the final envelope materialized inside `import_file.xml`, not only the source XML files
+   - Run `scripts\Test-GeneXusImportFileEnvelope.ps1 -InputPath <package> -AsJson` after writing the final `import_file.xml`; treat `não apto para prosseguir` as a hard stop before delivery
    - If an object is embedded under `<Objects>`, it must appear as XML element content only; embedded XML declaration such as `<?xml version="1.0" ...?>` inside `<Objects>` is a blocking envelope error
+   - Verify that `<Objects>` contains no text nodes or placeholder literals (strings such as `YOUR-GUID-HERE`, `PLACEHOLDER`, `TODO`) — these indicate the object XML was not properly embedded
    - If the current flow is manual IDE import and `import_file.xml` is still missing, do NOT treat the packaging task as complete
 16. Reread and apply local repository documentation before packaging:
    - Reopen `AGENTS.md`, `README.md`, and any equivalent local KB/repository documentation that defines project-specific functional review chains, contracts, or operational flow
@@ -471,8 +488,10 @@ Reference files and when to load them:
    - If heredoc, here-string, or an equivalent shell writer is used, inspect stderr and reject any artifact whose writer ended by EOF before the expected delimiter
    - Before packaging generated large XML, reread the file header, tail, and affected functional block; confirm the expected root closing tag, complete `CDATA`, and no truncated final line
    - For cloned `WebPanel`, if the delta should preserve the original binding surface, extract and compare the relevant serialized bindings from original and clone before packaging; at minimum, confirm matching `fieldSpecifier` count and names, and classify any divergence as intentional delta or clone error
-   - For `WorkWithForWeb`, do not use broad text substitution over repeated tags such as `<actions>`; locate the target `Selection` structurally inside the internal XML before editing actions
-   - For `WorkWithForWeb`, confirm any new action appears exactly once in the intended `Selection`; duplicates or ambiguous action scope block packaging
+   - For `WorkWithForWeb`, load [01j-workwithweb-cdata-padroes](../01j-workwithweb-cdata-padroes.md) before any textual edit inside the CDATA; the internal XML has at minimum two distinct `<actions>` scopes and often more when Grid tabs are present — empirically, 2/3 of objects in production KBs have `<actions>` in both `<selection>` (list-level) and `<tab>` (detail/grid-level)
+   - For `WorkWithForWeb`, do not use broad text substitution over repeated tags such as `<actions>`; a pattern-only regex will match across all levels: `<selection>/<actions>` (list actions), `<tab type="Tabular">/<actions>` (per-record actions), and each `<tab type="Grid">/<actions>` (child grid actions)
+   - For `WorkWithForWeb`, anchor any textual insertion at the intended scope using the parent block's unique structural identifier: `<selection>` for list-level actions; `<tab code="General">` for the main Tabular detail tab; `<tab code="X">` for a specific Grid tab — the `code` attribute is the stable KB-side identifier generated by the pattern and does not vary by locale
+   - For `WorkWithForWeb`, confirm any new action appears exactly once in the intended scope; duplicates or ambiguous action scope block packaging
    - When the current delta edits `Source`, reread the saved snippet before packaging and confirm coherent indentation, visually consistent block closure, and absence of visually broken blocks
    - If the current delta introduced or moved `if/endif`, `do case/endcase`, nested blocks, or comparable control-flow boundaries, treat this local readability review as mandatory operational hygiene
    - Treat structural XML validation, package-envelope validation, and semantic-contract validation as separate checks
@@ -598,6 +617,8 @@ Ao clonar tela customizada WorkWithPlus:
 - [ ] `ObjetosDaKbEmXml` was treated as read-only official snapshot
 - [ ] Current front folder `NomeCurto_GUID_YYYYMMDD` was created or reused explicitly
 - [ ] Active front folder format was validated before packaging; if local rules require `NomeCurto_GUID_YYYYMMDD`, nonconforming folders were reported and realigned before package generation
+- [ ] Round spec was declared (object names + types) before listing the workspace in step 4b — the declaration came from user intent, not from reading the workspace first
+- [ ] After listing the workspace, the round spec was verified against the workspace content, and any divergence (missing object or unexpected extra) was reconciled explicitly before proceeding to the collision gate
 - [ ] When the task was packaging, active XMLs were listed from the current front folder under `ObjetosGeradosParaImportacaoNaKbNoGenexus`
 - [ ] Candidate batch was isolated; no workspace contamination remained
 - [ ] When the front required a new unitary delta, the current front folder under `ObjetosGeradosParaImportacaoNaKbNoGenexus` was isolated explicitly before packaging
@@ -629,7 +650,7 @@ Ao clonar tela customizada WorkWithPlus:
 - [ ] No essential `Source` construct was accepted only because it looked plausible
 - [ ] For generated large XML, header, tail, expected root closing tag, complete `CDATA`, and absence of truncated final line were verified before packaging
 - [ ] Any heredoc/here-string writer stderr was checked, and no artifact ended by EOF before the expected delimiter
-- [ ] For `WorkWithForWeb` action changes, the target `Selection` was located structurally and the action appears exactly once in that scope
+- [ ] For `WorkWithForWeb` action changes, [01j-workwithweb-cdata-padroes](../01j-workwithweb-cdata-padroes.md) was loaded; the target scope was anchored by its unique structural identifier (`<selection>`, `<tab code="General">`, or `<tab code="X">`) and the new action appears exactly once in that scope
 - [ ] Procedure `Source` deltas that changed candidate/identity filters searched for paired cursor blocks and reconciled or justified `count/then-copy`, `exists/then-load`, `validate/then-apply`, or `select-candidate/then-materialize` criteria
 - [ ] If local repository documentation required direct-call review after `parm(...)` change, all applicable direct call sites were reviewed explicitly
 - [ ] If `parm(...)` changed, every new parm variable exists in the variables section of the `Procedure`
@@ -647,7 +668,9 @@ Ao clonar tela customizada WorkWithPlus:
 - [ ] Simple initial/final period filters were expressed as two independent `where` clauses when applicable
 - [ ] When useful for readability, edited `Source` considered the local form already present in the object without turning that into a hard methodological requirement
 - [ ] Final package-envelope serialization was validated explicitly, not inferred only from source XML well-formedness
+- [ ] `Test-GeneXusImportFileEnvelope.ps1` was run on the final `import_file.xml` and returned `apto para prosseguir` or `apto com ressalvas` with explicit justification; `não apto para prosseguir` was never suppressed
 - [ ] No embedded XML declaration remained inside object payload under `<Objects>`
+- [ ] No text nodes or placeholder literals were present inside `<Objects>` (confirmed by envelope gate or explicit visual inspection)
 - [ ] When import logs were used, messages were classified by stage and category before diagnosis
 - [ ] The final conclusion was based on the terminal relevant stage, not on an isolated warning or side error
 - [ ] Partial success was reported explicitly when only some objects failed
@@ -670,6 +693,7 @@ Ao clonar tela customizada WorkWithPlus:
 
 ## CONSTRAINTS
 
+- NEVER list the workspace and infer the candidate batch before declaring the round spec (object names + types expected in this round); the round spec must come from user intent or front scope — not from what happens to be in the workspace folder
 - NEVER invent a Part type GUID not present in the selected template
 - NEVER affirm import or build success — state "requires external IDE validation"
 - NEVER treat `runtime`, `Import File Load`, `Import`, and `Specification` as interchangeable evidence

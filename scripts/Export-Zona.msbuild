@@ -1,0 +1,7 @@
+<Project DefaultTargets="Export" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="C:\Program Files (x86)\GeneXus\GeneXus18\Genexus.Tasks.targets" />
+  <Target Name="Export">
+    <OpenKnowledgeBase Directory="D:\aaProyectos\Entorno04\77Lab\AngularV1" />
+    <Export File="d:\aaProyectos\Entorno04\Temp\Zona_Insertar_Export.xml" Objects="Procedure:Zona_Insertar" />
+  </Target>
+</Project>

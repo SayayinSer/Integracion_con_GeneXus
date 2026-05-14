@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW><MajorVersion>4</MajorVersion><MinorVersion>0</MinorVersion><Build>177934</Build></KMW>
+  <Objects>
+    <!-- SDT: Categoria_SDT -->
+    <Object fullyQualifiedName="Categoria_SDT" guid="0583b322-310f-4a26-8c9a-d9d7e1c02e79" name="Categoria_SDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Recupera Informacion Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="Categoria_SDT">
+          <LevelInfo guid="22ac6c3f-7241-4c1f-a1d6-be653395120c" name="Categoria_SDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Categoria_SDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>Categoria_SDT</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="f9b99619-f66d-4613-b0e8-95119a5872fa" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="e9fa3ee0-5e6f-4c85-af58-3bdd8846a02d" name="CategoriaNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+          </Item>
+          <Item guid="ceef9d78-d017-4a28-a37f-f0f6e46c0223" name="ExisteSioNo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Existe Sio No" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ExisteSioNo</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:SioNo</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_SDT</Value></Property><Property><Name>Description</Name><Value>Recupera Informacion Categoria</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- SDT: CategoriaListaSDT -->
+    <Object fullyQualifiedName="CategoriaListaSDT" guid="0fe4cab0-f2b3-42d5-bbdf-c6efb7647276" name="CategoriaListaSDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Lista de Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="CategoriaListaSDT">
+          <LevelInfo guid="d43999ca-2a6d-4022-b889-14388aa1dfbb" name="CategoriaListaSDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="CategoriaListaSDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaListaSDT</Value></Property><Property><Name>AttCollection</Name><Value>True</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="eaae65b4-a431-4e09-a140-aa59cb2b6395" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="1e4d29a4-1cc0-4f98-8344-321a52153b89" name="CategoriaNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CategoriaListaSDT</Value></Property><Property><Name>Description</Name><Value>Lista de Categoria</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- Proc: Categoria_Insertar -->
+    <Object fullyQualifiedName="Categoria_Insertar" guid="65bec223-3409-4689-a64e-0a37f89f46d7" name="Categoria_Insertar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Insertar Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Categoria.CategoriaNombre = &CategoriaNombre
+&Categoria.Insert()
+if &Categoria.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Categoria.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaNombre, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria"><Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaNombre"><Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <!-- Proc: Categoria_Modificar -->
+    <Object fullyQualifiedName="Categoria_Modificar" guid="7046e15d-a883-4fa5-bc7f-432eb0d41683" name="Categoria_Modificar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Modificar Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Categoria.Load(&CategoriaCodigo)
+&Categoria.CategoriaNombre = &CategoriaNombre
+&Categoria.Update()
+if &Categoria.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Categoria.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaCodigo, in:&CategoriaNombre, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria"><Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaNombre"><Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <!-- Proc: Categoria_Borrar -->
+    <Object fullyQualifiedName="Categoria_Borrar" guid="ccedc781-6743-4abe-8cc4-35c0f684aaa1" name="Categoria_Borrar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Borrar Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Categoria.Load(&CategoriaCodigo)
+&Categoria.Delete()
+if &Categoria.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Categoria.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaCodigo, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria"><Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <Object fullyQualifiedName="Categoria_DP" guid="fe601440-109c-40da-8236-da8d16a46939" name="Categoria_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[Categoria_SDT From Categoria where CategoriaCodigo = &CategoriaCodigo
+{
+    CategoriaCodigo
+    CategoriaNombre
+    ExisteSioNo = SioNo.Si
+}
+Categoria_SDT [Default]
+{
+    ExisteSioNo = SioNo.No
+}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&CategoriaCodigo);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_DP</Value></Property><Property><Name>Description</Name><Value>DP Categoria</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-Categoria_SDT</Value></Property></Properties>
+    </Object>
+
+    <Object fullyQualifiedName="CategoriaLista_DP" guid="0aec0f9b-b557-493f-9508-def4604c23a0" name="CategoriaLista_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Lista Categoria" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[CategoriaListaSDT From Categoria
+Order CategoriaNombre
+Where CategoriaNombre like &CategoriaNombre when Not &CategoriaNombre.IsEmpty()
+{
+    CategoriaCodigo
+    CategoriaNombre
+}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&CategoriaNombre);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="CategoriaNombre"><Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CategoriaLista_DP</Value></Property><Property><Name>Description</Name><Value>DP Lista Categoria</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-CategoriaListaSDT</Value></Property></Properties>
+    </Object>
+
+    <!-- API: API_Categorias -->
+    <Object fullyQualifiedName="API_Categorias" guid="4a86262e-ecd4-437a-83a7-ff3c8cb309ad" name="API_Categorias" type="36e32e2d-023e-4188-95df-d13573bac2e0" description="API Categorias" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="9f577ec2-27f4-4cf4-8ad5-f3f50c9d69b5">
+        <Source><![CDATA[APICategorias
+{
+    [RestMethod(GET)] Listar(in:&CategoriaNombre, out:&CategoriaListaSDT) => CategoriaLista_DP(in:&CategoriaNombre, out:&CategoriaListaSDT);
+    [RestMethod(GET)] Buscar(in:&CategoriaCodigo, out:&Categoria_SDT) => Categoria_DP(in:&CategoriaCodigo, out:&Categoria_SDT);
+    [RestMethod(POST)] Insertar(in:&CategoriaNombre, out:&Messages) => Categoria_Insertar(in:&CategoriaNombre, out:&Messages);
+    [RestMethod(PUT)] Modificar(in:&CategoriaCodigo, in:&CategoriaNombre, out:&Messages) => Categoria_Modificar(in:&CategoriaCodigo, in:&CategoriaNombre, out:&Messages);
+    [RestMethod(DELETE)] Borrar(in:&CategoriaCodigo, out:&Messages) => Categoria_Borrar(in:&CategoriaCodigo, out:&Messages);
+}]]></Source>
+      </Part>
+      <Part type="c44bd5ff-f918-415b-98e6-aca44fed84fa">
+        <Source><![CDATA[]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaNombre"><Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+        <Variable Name="Categoria_SDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Categoria_SDT</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaListaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:CategoriaListaSDT</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+  </Objects>
+</ExportFile>

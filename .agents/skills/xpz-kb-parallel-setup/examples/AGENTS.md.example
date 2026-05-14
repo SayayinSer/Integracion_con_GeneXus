@@ -10,12 +10,19 @@
   <YYYY-MM-DD>.
 <!-- PREENCHER: data no formato YYYY-MM-DD -->
 
-## Regra critica da pasta nativa da KB
+## Regra crítica da pasta nativa da KB
 
-`C:\KBs\<NomeKb>` e terreno proibido para gravacao por agentes.
+`C:\KBs\<NomeKb>` é terreno proibido para gravação por agentes.
 
-Agentes nao devem criar, editar, mover, renomear ou excluir arquivos nessa pasta.
-Leitura e permitida apenas quando o fluxo operacional explicito realmente exigir.
+Agentes não devem criar, editar, mover, renomear ou excluir arquivos nessa pasta.
+Leitura é permitida apenas quando o fluxo operacional explícito realmente exigir.
+
+Invocar o GeneXus via MSBuild headless (ex: `Invoke-GeneXusKbBuildAll.ps1`,
+`Invoke-GeneXusKbSpecifyGenerate.ps1`) não é gravação por agentes — é o GeneXus
+operando a KB como parte do seu funcionamento normal. O agente é o chamador do
+processo; quem grava na KB é o próprio GeneXus. Essa distinção é intencional:
+proibir o agente de manipular arquivos diretamente não proíbe invocar operações
+GeneXus autorizadas pelo usuário.
 
 ## Estrutura funcional da pasta paralela da KB
 
@@ -54,6 +61,9 @@ C:\Dev\Knowledge\GeneXus-XPZ-Skills
 
 Wrappers esperados:
 
+- `Test-<NomeKb>KbSetupFreshness.ps1`: PRE-CONDICAO do gatilho global — compara
+  `last_setup_audit_run_at` com a data de ultima modificacao do repositorio de
+  skills e retorna `GATE_ONLY` ou `AUDIT_REQUIRED: <motivo>`.
 - `Update-<NomeKb>KbFromXpz.ps1`: materializa XPZ/XML em `ObjetosDaKbEmXml`,
   grava `kb-source-metadata.md` e chama o refresh do indice quando nao estiver
   em `VerifyOnly`.
@@ -62,7 +72,7 @@ Wrappers esperados:
   `KbIntelligence\kb-intelligence.sqlite`.
 - `Query-<NomeKb>KbIntelligence.ps1`: consulta o indice derivado, inclusive
   `index-metadata`.
-- `Test-<NomeKb>KbGate.ps1`: gate de frescor — verifica estrutura, SQLite,
+- `Test-<NomeKb>KbIndexGate.ps1`: gate de frescor — verifica estrutura, SQLite,
   timestamps e retorna `GATE_OK` ou lanca `BLOCK: <motivo>`; deve ser o unico
   ponto de execucao do gate.
 - `Test-<NomeKb>KbSourceSanity.ps1`: wrapper consultivo para XMLs locais da
@@ -81,18 +91,23 @@ Wrappers esperados:
   `<Attribute>` sem depender de `Object/@type`.
 - `Notify-TaskComplete.ps1`: helper opcional de notificacao operacional.
 
+Scripts do motor com parâmetros totalmente dinâmicos por execução (ex:
+`Watch-GeneXusMsBuildLog.ps1`, cujo `-Pid` e `-LogPath` variam a cada build)
+nao requerem wrapper local — sao chamados diretamente pelo caminho absoluto
+do motor.
+
 ## Triagem Por Indice
 
 Para qualquer pergunta sobre existencia, localizacao, impacto tecnico, dependentes,
 dependencias ou investigacao funcional curta sobre objetos desta KB, usar
 `xpz-index-triage`. O gate e o unico ponto de entrada para o indice:
 
-1. Verificar se `scripts/Test-<NomeKb>KbGate.ps1` existe.
+1. Verificar se `scripts/Test-<NomeKb>KbIndexGate.ps1` existe.
    - Se ausente: encerrar a consulta e oferecer atualizacao via
      `xpz-kb-parallel-setup`.
 2. Executar o gate:
    ```powershell
-   & "C:\Dev\Prod\Gx_<NomeKb>\scripts\Test-<NomeKb>KbGate.ps1" #gate
+   & "C:\Dev\Prod\Gx_<NomeKb>\scripts\Test-<NomeKb>KbIndexGate.ps1" #gate
    ```
    - `GATE_OK` → prosseguir com `xpz-index-triage`.
    - `BLOCK: <motivo>` → encerrar a consulta e oferecer rebuild do indice.

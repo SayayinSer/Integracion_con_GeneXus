@@ -10,7 +10,7 @@ de presenca/ausencia de cada componente. Usado no setup inicial e em diagnostico
 antes de qualquer operacao.
 
 Os nomes de script verificados usam a forma curta sanitizada; na KB real, substituir
-pelos nomes definitivos com o identificador da KB (ex: Test-FabricaBrasilKbGate.ps1).
+pelos nomes definitivos com o identificador da KB (ex: Test-FabricaBrasilKbIndexGate.ps1).
 
 .PARAMETER KbRoot
 Caminho opcional para a raiz da pasta paralela da KB.
@@ -91,9 +91,10 @@ $scriptsDir = Join-Path $KbRoot 'scripts'
 foreach ($script in @(
     'Update-KbFromXpz.ps1',
     'Test-KbFullSnapshot.ps1',
+    'Test-KbSetupFreshness.ps1',
     'Query-KbIntelligence.ps1',
     'Rebuild-KbIntelligenceIndex.ps1',
-    'Test-KbGate.ps1',
+    'Test-KbIndexGate.ps1',
     'Get-KbMetadata.ps1',
     'Test-KbMetadataWrapper.ps1',
     'Test-KbStructure.ps1',
@@ -109,9 +110,10 @@ Test-Component -Label 'KbIntelligence\kb-intelligence.sqlite' `
 foreach ($scriptName in @(
     'Update-KbFromXpz.ps1',
     'Test-KbFullSnapshot.ps1',
+    'Test-KbSetupFreshness.ps1',
     'Query-KbIntelligence.ps1',
     'Rebuild-KbIntelligenceIndex.ps1',
-    'Test-KbGate.ps1',
+    'Test-KbIndexGate.ps1',
     'Get-KbMetadata.ps1',
     'Test-KbMetadataWrapper.ps1',
     'Test-KbStructure.ps1',

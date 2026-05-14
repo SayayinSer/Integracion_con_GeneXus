@@ -2,11 +2,21 @@
   <Import Project="C:\Program Files (x86)\GeneXus\GeneXus18\Genexus.Tasks.targets"/>
   <Target Name="DeleteObjects">
     <OpenKnowledgeBase Directory="D:\Models\77Lab\AngularV1"/>
-    <DeleteObject Object="DataProvider:Zona_DP"/>
-    <DeleteObject Object="DataProvider:ZonaLista_DP"/>
-    <DeleteObject Object="Procedure:Zona_Insertar"/>
-    <DeleteObject Object="Procedure:Zona_Modificar"/>
-    <DeleteObject Object="Procedure:Zona_Borrar"/>
+    
+    <DeleteObject Name="API_Zonas" Type="API"/>
+    
+    <DeleteObject Name="Zona_Insertar" Type="Procedure"/>
+    <DeleteObject Name="Zona_Modificar" Type="Procedure"/>
+    <DeleteObject Name="Zona_Borrar" Type="Procedure"/>
+    
+    <DeleteObject Name="Zona_DP" Type="Data Provider"/>
+    <DeleteObject Name="ZonaLista_DP" Type="Data Provider"/>
+    
+    <DeleteObject Name="Zona_SDT" Type="Structured Data Type"/>
+    <DeleteObject Name="ZonaListaSDT" Type="Structured Data Type"/>
+    
+    <DeleteObject Name="ApiZona" Type="Folder"/>
+    
     <CloseKnowledgeBase/>
   </Target>
 </Project>

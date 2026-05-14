@@ -1,0 +1,14 @@
+<Project ToolsVersion="Current" DefaultTargets="Run" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="C:\Genexus18\GX18U14\Genexus.Tasks.targets" />
+
+  <PropertyGroup>
+    <KBPath>D:\Models\77Lab\AngularV1</KBPath>
+  </PropertyGroup>
+
+  <Target Name="Run">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    <Specify ObjectName="API_Categorias" ObjectType="36e32e2d-023e-4188-95df-d13573bac2e0" />
+    <Build />
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

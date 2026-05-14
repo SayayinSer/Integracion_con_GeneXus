@@ -26,6 +26,7 @@ Consolidar regras de geracao, clonagem conservadora, materializacao, serializaca
 - `Regra documentada`: conceitos como `Base Table`, `Extended Table`, navegacao de `For each`, `Load`, `Refresh` e `Refresh Grid` pertencem ao runtime/especificacao do GeneXus e nao podem ser inferidos apenas da forma do XML.
 - `Inferência forte`: certos sinais estruturais do XML permitem falar em risco runtime relativo, desde que a fala seja qualificada e nao prometa comportamento real sem teste.
 - `Hipótese`: quanto mais denso o objeto em `events`, `grid`, `Level`, `AttributeProperties`, `parent`, `pattern` e links contextuais, maior tende a ser a sensibilidade a navegacao, carga de dados e comportamento nao trivial em execucao.
+- `Regra operacional`: achados empíricos específicos de scripts MSBuild headless — incompatibilidades de tasks, comportamentos verificados de API, evidências de execução em KB real — pertencem a `10-base-operacional-msbuild-headless.md`, não a este documento; `10-base` é par deste documento, não downstream dele.
 
 ## Niveis de confianca de fonte
 
@@ -66,7 +67,7 @@ Regras de uso:
 - `Evidência direta`: na KB `FabricaBrasil18` (.Net Environment, GeneXus com instalacao VS2022), a task `SpecifyAll` via MSBuild executou internamente, em sequencia: Database Impact Analysis, geracao de `ReorganizationScript.txt` e `bldReorganization.cs`, **reorganizacao real de banco** (`gxexec bldReorganization.cs`), especificacao, segunda geracao e **eventos pos-build** configurados na KB (`start c:\temp\sino.mp3`, `start cmd /c c:\Dropbox\...\AtualizaDeployFB18.Bat`). O gatilho foi import de atributo com mudanca de tamanho (de 2 para 5). Nenhum parametro explicito de autorizacao de reorg foi passado ao wrapper; o comportamento e intrinsecos a task.
 - `Evidência direta`: na mesma execucao, `SpecifyAll` nao expoe `FailIfReorg` nem equivalente — ao contrario de `BuildAll`; nao e possivel bloquear a reorg via parametro do wrapper quando chamando `SpecifyAll` diretamente.
 - `Regra operacional`: o wrapper `Invoke-GeneXusKbSpecifyGenerate.ps1` deve varrer stdout pelo padrao `Reorganiza` antes de classificar o resultado; se encontrado, o status deve ser `reorg detectada ou executada` e nunca `specify e generate concluidos` ou qualquer classificacao de sucesso sem confirmacao do usuario.
-- `Regra operacional`: stderr nao vazio em execucao headless de `SpecifyAll` (ex.: `attribute component isn't defined`) deve ser registrado como warning e impedir classificacao limpa, independente do exitCode.
+- `Regra operacional`: stderr nao vazio em execucao headless de `SpecifyAll` deve ser registrado como warning e impedir classificacao limpa, independente do exitCode — o padrao `context [anonymous] \d+:\d+ attribute component isn't defined` e ruido estrutural provado do GeneXus 18 e constitui excecao explicita a esta regra.
 - `Regra operacional`: linhas com `start c:` ou `start cmd` em stdout de execucao MSBuild indicam eventos pos-build configurados na KB que dispararam processos externos; registrar como warning separado, pois esses processos podem incluir deploys automaticos ou outras acoes com efeito colateral fora do escopo da verificacao.
 - `Regra operacional`: quando houver evidencia de import recente de objeto `Attribute:` ou de mudanca declarada de tamanho/tipo/precisao/subtipo de atributo, o agente deve exibir aviso explicito de risco de reorg e exigir confirmacao com a frase `entendo que havera reorg e concordo que prossiga` antes de chamar `Invoke-GeneXusKbSpecifyGenerate.ps1`.
 
@@ -97,6 +98,7 @@ Regras de uso:
 - `Regra operacional`: com gate de indice bloqueado, leitura pontual so e aceitavel para diagnostico minimo da incompatibilidade em documentacao local, estrutura, wrappers e metadados operacionais; nao montar, testar existencia, listar ou abrir caminho de XML oficial de objeto para responder pergunta de negocio.
 - `Regra operacional`: o gate do indice deve ser sequencial e atomico; nao testar, listar ou abrir caminho filho de uma camada antes de validar a camada pai, como `KbIntelligence\kb-intelligence.sqlite` antes de `KbIntelligence`.
 - `Regra operacional`: se o wrapper local documentado de consulta do indice estiver ausente, nao listar `scripts` nem procurar wrappers alternativos, backups ou nomes parecidos; tratar como defasagem da pasta paralela e oferecer atualizacao via setup.
+- `Regra operacional`: scripts do motor com parâmetros totalmente dinâmicos por execução não requerem wrapper local na pasta paralela — devem ser chamados diretamente pelo caminho absoluto do motor; wrapper local só se justifica quando há parâmetros estáticos da KB a encapsular.
 
 ## Evidencia complementar de gerador local
 
@@ -2190,3 +2192,14 @@ Funcionar como resumo decisório sem esconder os limites da evidência.
 - `Regra operacional`: a confirmacao funcional exige teste com o insumo oficial na versao correta e no formato esperado pelo objeto; esse teste e responsabilidade da frente funcional, nao da trilha de import.
 - `Regra operacional`: essa camada complementa os sub-estados ja definidos na skill `xpz-msbuild-import-export` — em particular `importacao real efetiva provada` — com consciencia explicita do insumo externo como dimensao de validacao separada.
 - `Regra operacional`: ausencia de teste funcional com insumo real nao invalida o sub-estado de import ja declarado; sao camadas independentes.
+
+## Limite do XPZ/XML frente a providers e extensoes GeneXus
+
+- `Regra operacional`: o acervo XPZ/XML materializado em `ObjetosDaKbEmXml` e fonte normativa para objetos GeneXus exportaveis comuns; ele nao cobre metadados internos de providers, designers ou extensoes que a KB persiste diretamente no banco interno.
+- `Regra operacional`: quando um warning de abertura, build ou export da KB mencionar provider ausente, item desconhecido, designer, part ou metadado de extensao, classificar o item citado antes de buscar no XPZ/XML: (a) objeto GeneXus exportavel comum; (b) part/metadado interno; (c) designer/provider de extensao; (d) tipo desconhecido.
+- `Regra operacional`: se a busca no XPZ/XML for negativa e o item nao pertencer a categoria (a), a conclusao deve ser limitada: "nao encontrado no XPZ/XML" — nunca "nao existe na KB".
+- `Regra operacional`: as seis verbalizacoes canonicas de conclusao para esse caso sao, em ordem de certeza crescente: `nao encontrado no XPZ/XML`, `nao exportado como objeto comum`, `possivel metadado interno de provider`, `confirmado em tabela interna da KB`, `provider ausente ou incompativel no ambiente`, `remocao requer ferramenta oficial ou suporte`.
+- `Regra operacional`: nunca usar apenas o resultado negativo da busca no XPZ/XML para concluir que o warning de provider e falso ou que nao ha residuo na KB.
+- `Regra operacional`: termos que devem acionar classificacao antes de concluir ausencia: `FormDesigner`, `WebPanelDesigner`, `SDPanelDesigner`, `Object Designer`, `FormDesignerPart`, `provider GUID`, `extension provider`, `item desconhecido` e qualquer GUID nao reconhecido citado em warning de abertura ou build.
+- `Regra operacional`: referencia textual a K2B, K2BTools ou nome de framework no XML exportado nao e, por si so, evidencia de provider ausente; pode ser consumo legitimo de design system ou framework. Nao confundir objeto funcional com metadado interno de designer.
+- `Regra operacional`: diagnostico SQL somente leitura no banco interno da KB e o caminho para evidencia de segunda camada, quando o XPZ/XML nao cobrir o item. Esse diagnostico so deve ser sugerido quando houver evidencia concreta de provider/item desconhecido na abertura ou build, e nunca como varredura de rotina.

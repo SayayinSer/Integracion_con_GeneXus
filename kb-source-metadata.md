@@ -1,9 +1,9 @@
 ---
 name: KB Source Metadata
 description: Valores de KMW e Source extraidos do XPZ mais recente da IDE â€” usados para montar o envelope de import_file.xml
-updated: 2026-05-05T18:35:08.0000000Z
-last_xpz_materialization_run_at: 2026-05-05T18:35:08.0000000Z
-source_xpz: d:\aaProyectos\Entorno04\XpzExportadosPelaIDE\FullExport.xpz
+updated: 2026-05-13T04:55:27.0000000Z
+last_xpz_materialization_run_at: 2026-05-13T04:55:27.0000000Z
+source_xpz: XpzExportadosPelaIDE\FullExport.xpz
 source_refresh_status: partial-new
 ---
 

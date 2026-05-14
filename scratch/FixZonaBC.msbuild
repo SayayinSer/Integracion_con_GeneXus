@@ -1,0 +1,13 @@
+<Project DefaultTargets="FixBC" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(GX_PROGRAM_DIR)\Genexus.Tasks.targets" />
+  <PropertyGroup>
+    <KBPath Condition="'$(KBPath)' == ''">D:\Models\77Lab\AngularV1</KBPath>
+    <GXDir Condition="'$(GXDir)' == ''">C:\Program Files (x86)\GeneXus\GeneXus18</GXDir>
+  </PropertyGroup>
+  <Target Name="FixBC">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    <Message Text="Setting Business Component = True for 'Zona'..." Importance="high" />
+    <SetObjectProperty Name="Zona" Type="Transaction" PropertyName="Business Component" PropertyValue="True" />
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

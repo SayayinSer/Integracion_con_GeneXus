@@ -1,0 +1,24 @@
+<Project ToolsVersion="Current" DefaultTargets="Run" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="C:\Genexus18\GX18U14\Genexus.Tasks.targets" />
+
+  <PropertyGroup>
+    <KBPath>D:\Models\77Lab\AngularV1</KBPath>
+    <BCPath>D:\aaProyectos\Entorno04\Envio_XPZ\CategoriaBC.xml</BCPath>
+    <APIPath>D:\aaProyectos\Entorno04\Envio_XPZ\API_Categorias_Final.xml</APIPath>
+  </PropertyGroup>
+
+  <Target Name="Run">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    
+    <!-- 1. Ensure Transaction is BC -->
+    <Import File="$(BCPath)" />
+    
+    <!-- 2. Import API Objects -->
+    <Import File="$(APIPath)" />
+    
+    <!-- 3. Build only the API and its dependencies -->
+    <BuildAll />
+    
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

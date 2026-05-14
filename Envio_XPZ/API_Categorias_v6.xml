@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW><MajorVersion>4</MajorVersion><MinorVersion>0</MinorVersion><Build>177934</Build></KMW>
+  <Objects>
+    <Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T15:04:32.0000000Z" checksum="e0ea3f212a18153aa61eba2512362873" fullyQualifiedName="API_Categorias" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="dc7d1e0f-9fd4-4d64-9c6b-d6b33cc3b3aa" name="API_Categorias" type="36e32e2d-023e-4188-95df-d13573bac2e0" description="API para Conceptos de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="9f577ec2-27f4-4cf4-8ad5-f3f50c9d69b5">
+        <Source><![CDATA[ApiCategoria
+{
+	[Description("Recupera la Lista de Conceptos de Caja cargados.")]
+	[RestMethod(GET)]
+	Listar(in:&Buscar_CategoriaNombre, out:&CategoriaListaSDT)
+ => CategoriaLista_DP(in:&Buscar_CategoriaNombre,out:&CategoriaListaSDT);
+ 
+ 	[Description("Recupera un Conceptos de Caja")]
+ 	[RestMethod(GET)]
+ 	Buscar(in:&Buscar_CategoriaCodigo, out:&CategoriaSDT)
+ => Categoria_DP(in:&Buscar_CategoriaCodigo,out:&CategoriaSDT);
+ 
+ 	[Description("Graba un Nuevo de Conceptos de Caja")]
+ 	[RestMethod(POST)]
+ 	Insertar(in:&Buscar_CategoriaNombre, out:&Messages)
+ => Categoria_Insertar(in:&Buscar_CategoriaNombre,out:&Messages);
+ 
+ 	[Description("Modificar un Conceptos de Caja existente")]
+ 	[RestMethod(PUT)]
+ 	Modificar(in:&Buscar_CategoriaCodigo,in:&Buscar_CategoriaNombre, out:&Messages)
+ => Categoria_Modificar(in:&Buscar_CategoriaCodigo,in:&Buscar_CategoriaNombre,out:&Messages);
+ 
+ 	[Description("Borrar un Conceptos de Caja existente")]
+ 	[RestMethod(DELETE)]
+ 	Borrar(in:&Buscar_CategoriaCodigo,out:&Messages)
+ => Categoria_Borrar(in:&Buscar_CategoriaCodigo,out:&Messages);
+	}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="c44bd5ff-f918-415b-98e6-aca44fed84fa">
+        <Source><![CDATA[Event Insertar.Before
+	  if &Buscar_CategoriaNombre.IsEmpty()
+        &RestCode = 412
+        return
+    endif
+Endevent
+
+Event Buscar.Before
+	  if &Buscar_CategoriaCodigo <= 0
+        &RestCode = 412
+        return
+    endif
+Endevent
+
+Event Modificar.Before
+	  if &Buscar_CategoriaCodigo <= 0
+        &RestCode = 412
+        return
+    endif
+Endevent
+
+Event Borrar.Before
+	 if &Buscar_CategoriaCodigo <= 0
+        &RestCode = 412
+        return
+    endif
+Endevent
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        
+        <Variable Name="Buscar_CategoriaCodigo">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Buscar_CategoriaCodigo</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Id</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+        </Variable>
+        <Variable Name="Buscar_CategoriaNombre">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Buscar_CategoriaNombre</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Nombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaListaSDT">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaListaSDT</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:CategoriaListaSDT</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaSDT">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaSDT</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Categoria_SDT</Value></Property></Properties>
+        </Variable>
+        <Variable Name="Messages">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties>
+        </Variable><Variable Name="RestServiceName" /><Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties></Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>API_Categorias</Value></Property><Property><Name>Description</Name><Value>API para Conceptos de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T00:00:02.0000000Z" checksum="6a17a3c4ccce001ba02a60a3243fb688" fullyQualifiedName="Categoria_Insertar" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="148f049e-007d-4b2d-bf65-8bfa8689b053" name="Categoria_Insertar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Insertar Concepto de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[/////////////////////////////
+// Insertar Concepto de Caja 
+
+&Categoria.CategoriaNombre = &CategoriaNombre
+If &Categoria.Insert()
+	Commit
+Else
+	Rollback
+Endif
+// Devuelve mensajes
+&Messages = &Categoria.GetMessages()
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="c414ed00-8cc4-4f44-8820-4baf93547173">
+        <Properties />
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaNombre,
+	out:&Messages);
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="763f0d8b-d8ac-4db4-8dd4-de8979f2b5b9">
+        <Properties />
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaNombre">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Nombre</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+        </Variable>
+        <Variable Name="Messages">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties>
+        </Variable>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_Insertar</Value></Property><Property><Name>Description</Name><Value>Insertar Concepto de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T00:00:02.0000000Z" checksum="34dd62f36684867ff00cc1498d51b97d" fullyQualifiedName="Categoria_Modificar" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="e2db0cc0-0360-4603-b214-9356d9bb3e0b" name="Categoria_Modificar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Modificar un Concepto de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[/////////////////////////////
+// Modificar Concepto de Caja 
+
+&Categoria.Load(&CategoriaCodigo)
+&Categoria.CategoriaNombre = &CategoriaNombre
+If &Categoria.Update()
+	Commit
+Else
+	Rollback
+Endif
+// Devuelve mensajes
+&Messages = &Categoria.GetMessages()
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="c414ed00-8cc4-4f44-8820-4baf93547173">
+        <Properties />
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaCodigo,
+	in:&CategoriaNombre,
+	out:&Messages);
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="763f0d8b-d8ac-4db4-8dd4-de8979f2b5b9">
+        <Source><![CDATA[]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaNombre">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Nombre</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+        </Variable>
+        <Variable Name="Messages">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaCodigo">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:Codigo</Value></Property></Properties>
+        </Variable>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_Modificar</Value></Property><Property><Name>Description</Name><Value>Modificar un Concepto de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T01:03:26.0000000Z" checksum="4982f518ffb97306bef9d589704f743d" fullyQualifiedName="Categoria_Borrar" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="d2c61f6c-a9ab-47ba-beb1-73f09781ea78" name="Categoria_Borrar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Borrar un Concepto de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[/////////////////////////////
+// Borrar Concepto de Caja
+
+&Categoria.Load(&CategoriaCodigo)
+&Categoria.Delete()
+If &Categoria.Success()
+	Commit
+Else
+	Rollback
+Endif
+// Devuelve mensajes
+&Messages = &Categoria.GetMessages()
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="c414ed00-8cc4-4f44-8820-4baf93547173">
+        <Properties />
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CategoriaCodigo,
+	out:&Messages);
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="763f0d8b-d8ac-4db4-8dd4-de8979f2b5b9">
+        <Source><![CDATA[]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Categoria">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Categoria</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Categoria</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaNombre">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Nombre</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+        </Variable>
+        <Variable Name="Messages">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties>
+        </Variable>
+        <Variable Name="CategoriaCodigo">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:Codigo</Value></Property></Properties>
+        </Variable>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_Borrar</Value></Property><Property><Name>Description</Name><Value>Borrar un Concepto de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T01:26:21.0000000Z" checksum="e7dd8db67acaf37bdb52db82fb006d1f" fullyQualifiedName="Categoria_DP" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="76aa599a-a1ce-4c5b-84ce-1bc81a3ff3d6" name="Categoria_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="Recupera Concepto de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[Categoria_SDT From Categoria
+where CategoriaCodigo = &CategoriaCodigo 
+{
+	CategoriaCodigo  /*Concepto Caja Id value*/
+	CategoriaNombre  /*Concepto Caja Nombre value*/
+	ExisteSioNo = SioNo.Si /*Existe Sio No value*/
+}
+Categoria_SDT [Default]
+{
+	ExisteSioNo = SioNo.No /*Existe Sio No value*/
+}
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&CategoriaCodigo);
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="CategoriaCodigo">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Id</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+        </Variable>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_DP</Value></Property><Property><Name>Description</Name><Value>Recupera Concepto de Caja</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-Categoria_SDT</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-07T12:19:11.0000000Z" checksum="ca6e8cf7e9ef8585ef1d79bbdd48a0f8" fullyQualifiedName="CategoriaLista_DP" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="808aa42c-3dfb-485f-9919-0104962041f0" name="CategoriaLista_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="Recuperar Lista de Conceptos de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[CategoriaListaSDT From Categoria
+Order CategoriaNombre
+Where CategoriaNombre like  &CategoriaNombre when Not &CategoriaNombre.IsEmpty()
+{
+	CategoriaListaSDTItem
+	{
+		CategoriaCodigo  /*Concepto Caja Id value*/
+		CategoriaNombre  /*Concepto Caja Nombre value*/
+	}
+}
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&CategoriaNombre);
+]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="CategoriaNombre">
+          <Documentation />
+          <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>Description</Name><Value>Concepto Caja Nombre</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>False</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+        </Variable>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="ad3ca970-19d0-44e1-a7b7-db05556e820c">
+        <Help>
+          <HelpItem>
+            <Language>88313f43-5eb2-0000-0028-e8d9f5bf9588-Spanish</Language>
+            <Content />
+          </HelpItem>
+        </Help>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CategoriaLista_DP</Value></Property><Property><Name>Description</Name><Value>Recuperar Lista de Conceptos de Caja</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-CategoriaListaSDT</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-06T23:59:58.0000000Z" checksum="d2e07c4ba1300a5600a2f6eb5777f035" fullyQualifiedName="Categoria_SDT" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="d6ef88de-c598-42e5-ab66-665faca53af2" name="Categoria_SDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Recupera Informacion Concepto de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="Categoria_SDT">
+          <LevelInfo guid="eef7156c-62ba-4b01-a0c2-e05c6cfc995b" name="Categoria_SDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Conceptos Caja_SDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>Categoria_SDT</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="f7d8a1ee-d985-4377-8a99-9543519a5d0d" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="a78c962b-cade-44b2-9a10-18682445453e" name="CategoriaNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+          </Item>
+          <Item guid="e8e6e0c4-339b-4c21-9079-153af9a7f4dd" name="ExisteSioNo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Existe Sio No" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ExisteSioNo</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:SioNo</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Categoria_SDT</Value></Property><Property><Name>Description</Name><Value>Recupera Informacion Concepto de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+<Object parentGuid="2dfec5c9-ffb8-4fcd-bb0c-0561e5721202" user="FACTORIAGX\Sergio" versionDate="0001-01-01T00:00:00.0000000" lastUpdate="2026-05-06T23:59:58.0000000Z" checksum="6935d8394a404dcf248532d4299a5a67" fullyQualifiedName="CategoriaListaSDT" moduleGuid="0667e98c-ad46-4271-ba96-e5891891c4fd" guid="330bcbd5-4c3c-43f4-b306-3df87f155b10" name="CategoriaListaSDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Lista de Conceptos de Caja" parent="ApiCategoria" parentType="00000000-0000-0000-0000-000000000008">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="CategoriaListaSDT">
+          <LevelInfo guid="ae4cb35a-ae1b-46d7-8eab-4dd5f8f9e57f" name="CategoriaListaSDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Conceptos Caja Lista SDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaListaSDT</Value></Property><Property><Name>AttCollection</Name><Value>True</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="a44ae3d1-cc38-4845-aa75-861db6cc2c96" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="32231100-0d46-4c70-882c-ef01dab233e7" name="CategoriaNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Concepto Caja Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaNombre</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CategoriaListaSDT</Value></Property><Property><Name>Description</Name><Value>Lista de Conceptos de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+  </Objects>
+</ExportFile>

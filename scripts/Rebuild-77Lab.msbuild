@@ -1,0 +1,13 @@
+<Project ToolsVersion="Current" DefaultTargets="Run" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="C:\Genexus18\GX18U14\Genexus.Tasks.targets" />
+
+  <PropertyGroup>
+    <KBPath>D:\Models\77Lab\AngularV1</KBPath>
+  </PropertyGroup>
+
+  <Target Name="Run">
+    <OpenKnowledgeBase Directory="$(KBPath)" />
+    <BuildAll ForceRebuild="true" />
+    <CloseKnowledgeBase />
+  </Target>
+</Project>

@@ -9,6 +9,13 @@
     "WorkerIdleTimeoutMinutes": 5
   },
   "Environment": {
-    "KBPath": "D:\\Models\\77Lab\\AngularV1"
+    "KBPath": "D:\\Models\\77Lab\\AngularV1",
+    "KBs": {
+      "LabAngularV2": "D:\\Models\\77Lab\\LabAngularV2",
+      "LabGX17U11": "D:\\Models\\77Lab\\LabGX17U11",
+      "ServicePlus": "D:\\Models\\77Lab\\ServicePlus",
+      "AngularV1": "D:\\Models\\77Lab\\AngularV1"
+    },
+    "ActiveKb": "AngularV1"
   }
 }
