@@ -37,10 +37,33 @@ Nome opcional da versão a posicionar antes da verificação.
 Nome opcional do Environment a posicionar antes da verificação.
 
 .PARAMETER ForceRebuild
-Quando true, força a regeneração mesmo que o objeto não tenha mudado. Default: false.
+Quando true, força a regeneração de TODOS os objetos da KB, independentemente de mudança.
+Equivale a "Rebuild All" da IDE (não a "Build All"): muda a semântica de SpecifyAll/GenerateOnly
+incremental para regeneração total. Em KB grande pode durar horas e regenerar centenas/milhares
+de objetos, incluindo subtype groups. Default: false.
+
+Operação ampla bloqueada por política: ForceRebuild=true só pode ser usado em conjunto com
+-AllowWideRebuild e confirmação explícita por frase exata do usuário (modo interativo) ou
+-AllowWideRebuild -ConfirmWideRebuild (modo não-interativo). Tentativa sem -AllowWideRebuild
+é bloqueada com exit 46.
 
 .PARAMETER DetailedNavigation
 Quando true, executa navegação detalhada. Default: false.
+
+.PARAMETER AllowWideRebuild
+Switch. Único caminho autorizado para habilitar -ForceRebuild true. Em modo interativo
+(sem -ConfirmWideRebuild), exige que o usuário digite no terminal a frase exata:
+    entendo que isto pode regerar a KB inteira e aceito o custo
+Em modo não-interativo (com -ConfirmWideRebuild), a confirmação é feita pelo chamador
+via parâmetro. Sem este switch, -ForceRebuild true é bloqueado por política (exit 46).
+
+.PARAMETER ConfirmWideRebuild
+Switch. Usado em conjunto com -AllowWideRebuild para dispensar o Read-Host interativo
+da frase de confirmação. Destina-se exclusivamente a processos desanexados onde não
+há terminal disponível. Usar -ConfirmWideRebuild sem -AllowWideRebuild é bloqueado
+por política (exit 46). O chamador é responsável por obter confirmação explícita do
+usuário humano com a frase exata antes de passar -ConfirmWideRebuild — este parâmetro
+não dispensa a confirmação, apenas muda o canal.
 
 .PARAMETER VerboseLog
 Amplia o detalhamento gravado no log sem alterar o resultado lógico.
@@ -69,6 +92,10 @@ param(
 
     [ValidateSet('true', 'false')]
     [string]$DetailedNavigation = 'false',
+
+    [switch]$AllowWideRebuild,
+
+    [switch]$ConfirmWideRebuild,
 
     [switch]$VerboseLog
 )
@@ -325,8 +352,19 @@ function Get-RegexValue {
 
 function Split-NonEmptyLines {
     param([string]$Text)
-    if ([string]::IsNullOrWhiteSpace($Text)) { return @() }
-    return @($Text -split "(`r`n|`n|`r)" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    # Preserva tipagem [string[]] mesmo quando o resultado tem 0 ou 1 elemento.
+    # Sem isso, o PowerShell faz unwrapping em propriedade de hashtable:
+    #   0 elementos -> $null (JSON: null)
+    #   1 elemento  -> string solta (JSON: string em vez de array)
+    # Duas quirks distintas a tratar:
+    #   - 1+ elementos: `, $result` impede o unwrapping no retorno
+    #   - 0 elementos: `[string[]]$x = @()` vira `$null`; usar [string[]]::new(0) explicito
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return ,([string[]]::new(0))
+    }
+    [string[]]$result = @($Text -split "(`r`n|`n|`r)" |
+                          Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    return ,$result
 }
 
 function Resolve-BuildStatus {
@@ -351,13 +389,17 @@ function Resolve-BuildStatus {
         }
     }
 
-    # Eventos pós-build detectados (start c:, start cmd): KB configurada com ações
-    # pós-build que disparam processos externos. Registrar como warning mesmo quando
-    # a classificação principal for bem-sucedida.
-    $postBuildLines = @($StdOutText -split "`r?`n" | Where-Object { $_ -match '^\s+start (c:|cmd)' })
+    # Eventos pós-build detectados (start c:, start cmd, e variantes prefixadas com REM
+    # quando o GeneXus encena comandos que tentou rodar mas falharam, ex.: .Bat ausente).
+    # KB configurada com ações pós-build que disparam (ou tentam disparar) processos externos.
+    # Registrar como warning mesmo quando a classificação principal for bem-sucedida.
+    $postBuildLines = @($StdOutText -split "`r?`n" |
+                        Where-Object { $_ -match '^\s*(REM\s+)?start\s+(c:|cmd)' })
     if ($postBuildLines.Count -gt 0) {
         foreach ($evtLine in $postBuildLines) {
-            Add-WarningMessage -Message ('Evento pós-build detectado em stdout: "{0}". A KB disparou processos externos durante o SpecifyAll.' -f $evtLine.Trim())
+            $trimmed = $evtLine.Trim()
+            $shown = if ($trimmed -match '^(?i)REM\s+') { "(commented) $trimmed" } else { $trimmed }
+            Add-WarningMessage -Message ('Evento pós-build detectado em stdout: "{0}". A KB disparou (ou tentou disparar) processos externos durante o SpecifyAll.' -f $shown)
         }
     }
 
@@ -421,9 +463,120 @@ $script:BlockingReasons = New-Object System.Collections.Generic.List[string]
 $script:Warnings        = New-Object System.Collections.Generic.List[string]
 $script:StrategyTrace   = New-Object System.Collections.Generic.List[string]
 
+$confirmWideRebuildMode    = $null
+$allowWideRebuildConfirmed = $false
+
 $resolvedLogPath = Get-FullPathSafe -PathValue $LogPath
 
 try {
+    # Gate de segurança: -ConfirmWideRebuild sem -AllowWideRebuild não tem sentido e é bloqueado por política
+    if ($ConfirmWideRebuild.IsPresent -and -not $AllowWideRebuild.IsPresent) {
+        Add-BlockingReason -Reason '-ConfirmWideRebuild so pode ser usado em conjunto com -AllowWideRebuild. Para confirmar regeneracao ampla interativamente, use apenas -AllowWideRebuild. Para modo nao-interativo, use -AllowWideRebuild -ConfirmWideRebuild apos confirmar a operacao com o usuario humano.'
+        $blocked = [ordered]@{
+            status           = 'bloqueado por politica de seguranca'
+            summary          = '-ConfirmWideRebuild requer -AllowWideRebuild. Execute novamente com -AllowWideRebuild -ConfirmWideRebuild apos confirmar a operacao com o usuario humano.'
+            exitCode         = 46
+            stage            = 'pre-specify-generate'
+            requestedContext = [ordered]@{
+                VersionName                = $VersionName
+                EnvironmentName            = $EnvironmentName
+                ForceRebuild               = $ForceRebuild
+                DetailedNavigation         = $DetailedNavigation
+                AllowWideRebuildRequested  = $false
+                AllowWideRebuildConfirmed  = $false
+                ConfirmWideRebuildMode     = $confirmWideRebuildMode
+            }
+            observedContext  = [ordered]@{
+                ActiveVersion     = $null
+                ActiveEnvironment = $null
+                SpecifyDone       = $false
+                GenerateDone      = $false
+            }
+            resolvedPaths    = [ordered]@{
+                GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
+                MsBuildPath      = (Get-FullPathSafe -PathValue $MsBuildPath)
+                KbPath           = (Get-FullPathSafe -PathValue $KbPath)
+                WorkingDirectory = (Get-FullPathSafe -PathValue $WorkingDirectory)
+                LogPath          = $resolvedLogPath
+            }
+            pathActions      = [ordered]@{ WorkingDirectory = 'blocked-policy' }
+            artifacts        = [ordered]@{
+                ProbeLogPath     = $null
+                MsBuildFilePath  = $null
+                StdOutPath       = $null
+                StdErrPath       = $null
+                ExecutionLogPath = $resolvedLogPath
+            }
+            blockingReasons  = @($script:BlockingReasons)
+            warnings         = @($script:Warnings)
+            strategyTrace    = @($script:StrategyTrace)
+        }
+        $blockedJson = ConvertTo-JsonText -InputObject $blocked
+        if (-not [string]::IsNullOrWhiteSpace($resolvedLogPath) -and -not (Test-IsUnderProgramFilesX86 -PathValue $resolvedLogPath)) {
+            $parent = [System.IO.Path]::GetDirectoryName($resolvedLogPath)
+            if (-not [string]::IsNullOrWhiteSpace($parent) -and (Test-Path -LiteralPath $parent -PathType Container)) {
+                Write-JsonLog -TargetLogPath $resolvedLogPath -JsonPayload $blockedJson
+            }
+        }
+        Write-Output $blockedJson
+        exit 46
+    }
+
+    # Gate de segurança: -ForceRebuild=true sem -AllowWideRebuild é bloqueado por política
+    # ForceRebuild=true muda SpecifyAll/GenerateOnly de incremental para regeneracao total
+    # de TODOS os objetos da KB. Em KB grande pode levar horas e regenerar centenas/milhares.
+    if ($ForceRebuild -eq 'true' -and -not $AllowWideRebuild.IsPresent) {
+        Add-BlockingReason -Reason 'ForceRebuild=true muda SpecifyAll/GenerateOnly de incremental para regeneracao TOTAL de todos os objetos da KB. Em KB grande pode levar horas e regenerar centenas/milhares de objetos. So pode ser habilitado via -AllowWideRebuild com confirmacao explicita do usuario. Para verificacao incremental, omita ForceRebuild ou use ForceRebuild=false.'
+        $blocked = [ordered]@{
+            status           = 'bloqueado por politica de seguranca'
+            summary          = 'ForceRebuild=true requer -AllowWideRebuild e confirmacao explicita do usuario por frase exata. Para verificacao incremental, omita ForceRebuild.'
+            exitCode         = 46
+            stage            = 'pre-specify-generate'
+            requestedContext = [ordered]@{
+                VersionName                = $VersionName
+                EnvironmentName            = $EnvironmentName
+                ForceRebuild               = $ForceRebuild
+                DetailedNavigation         = $DetailedNavigation
+                AllowWideRebuildRequested  = $false
+                AllowWideRebuildConfirmed  = $false
+                ConfirmWideRebuildMode     = $confirmWideRebuildMode
+            }
+            observedContext  = [ordered]@{
+                ActiveVersion     = $null
+                ActiveEnvironment = $null
+                SpecifyDone       = $false
+                GenerateDone      = $false
+            }
+            resolvedPaths    = [ordered]@{
+                GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
+                MsBuildPath      = (Get-FullPathSafe -PathValue $MsBuildPath)
+                KbPath           = (Get-FullPathSafe -PathValue $KbPath)
+                WorkingDirectory = (Get-FullPathSafe -PathValue $WorkingDirectory)
+                LogPath          = $resolvedLogPath
+            }
+            pathActions      = [ordered]@{ WorkingDirectory = 'blocked-policy' }
+            artifacts        = [ordered]@{
+                ProbeLogPath     = $null
+                MsBuildFilePath  = $null
+                StdOutPath       = $null
+                StdErrPath       = $null
+                ExecutionLogPath = $resolvedLogPath
+            }
+            blockingReasons  = @($script:BlockingReasons)
+            warnings         = @($script:Warnings)
+            strategyTrace    = @($script:StrategyTrace)
+        }
+        $blockedJson = ConvertTo-JsonText -InputObject $blocked
+        if (-not [string]::IsNullOrWhiteSpace($resolvedLogPath) -and -not (Test-IsUnderProgramFilesX86 -PathValue $resolvedLogPath)) {
+            $parent = [System.IO.Path]::GetDirectoryName($resolvedLogPath)
+            if (-not [string]::IsNullOrWhiteSpace($parent) -and (Test-Path -LiteralPath $parent -PathType Container)) {
+                Write-JsonLog -TargetLogPath $resolvedLogPath -JsonPayload $blockedJson
+            }
+        }
+        Write-Output $blockedJson
+        exit 46
+    }
+
     if ($VerboseLog.IsPresent) {
         Add-StrategyTrace -Message 'VerboseLog habilitado para detalhamento adicional.'
     }
@@ -443,10 +596,13 @@ try {
             exitCode         = $probeStage.ExitCode
             stage            = 'probe'
             requestedContext = [ordered]@{
-                VersionName         = $VersionName
-                EnvironmentName     = $EnvironmentName
-                ForceRebuild        = $ForceRebuild
-                DetailedNavigation  = $DetailedNavigation
+                VersionName                = $VersionName
+                EnvironmentName            = $EnvironmentName
+                ForceRebuild               = $ForceRebuild
+                DetailedNavigation         = $DetailedNavigation
+                AllowWideRebuildRequested  = $AllowWideRebuild.IsPresent
+                AllowWideRebuildConfirmed  = $false
+                ConfirmWideRebuildMode     = $confirmWideRebuildMode
             }
             observedContext  = [ordered]@{
                 ActiveVersion     = $null
@@ -486,6 +642,87 @@ try {
     $resolvedMsBuildPath = [string]$probeStage.Diagnostic.resolvedPaths.MsBuildPath
     $resolvedKbPath      = [string]$probeStage.Diagnostic.resolvedPaths.KbPath
 
+    # Confirmação explícita de regeneração ampla (ForceRebuild=true + -AllowWideRebuild)
+    # -AllowWideRebuild so autoriza ForceRebuild=true; sozinho com ForceRebuild=false e redundante.
+    if ($ForceRebuild -eq 'true' -and $AllowWideRebuild.IsPresent) {
+        if ($ConfirmWideRebuild.IsPresent) {
+            $allowWideRebuildConfirmed = $true
+            $confirmWideRebuildMode    = 'parameter'
+            Add-StrategyTrace -Message 'AllowWideRebuild confirmado via -ConfirmWideRebuild (modo nao-interativo). ForceRebuild=true autorizado.'
+        } else {
+            $confirmWideRebuildMode = 'interactive'
+            Write-Host ''
+            Write-Host 'AVISO: O parametro -AllowWideRebuild foi especificado e ForceRebuild=true.'
+            Write-Host ''
+            Write-Host ('KB alvo:      {0}' -f $resolvedKbPath)
+            Write-Host ('GeneXusDir:   {0}' -f $resolvedGeneXusDir)
+            Write-Host ''
+            Write-Host 'ForceRebuild=true muda SpecifyAll/GenerateOnly de incremental para regeneracao'
+            Write-Host 'TOTAL de TODOS os objetos da KB. Em KB grande pode levar horas e regenerar'
+            Write-Host 'centenas/milhares de objetos, incluindo subtype groups.'
+            Write-Host ''
+            Write-Host 'Para confirmar, digite EXATAMENTE a frase abaixo (sem aspas):'
+            Write-Host '    entendo que isto pode regerar a KB inteira e aceito o custo'
+            Write-Host ''
+            $wideRebuildConfirmation = Read-Host 'Confirmacao'
+
+            if ($wideRebuildConfirmation -ne 'entendo que isto pode regerar a KB inteira e aceito o custo') {
+                Add-BlockingReason -Reason 'Regeneracao ampla (ForceRebuild=true) nao confirmada pelo usuario com a frase exata. Execucao cancelada por seguranca.'
+                $aborted = [ordered]@{
+                    status           = 'cancelado pelo usuario'
+                    summary          = 'Regeneracao ampla nao confirmada pelo usuario. SpecifyAll/GenerateOnly cancelado por seguranca.'
+                    exitCode         = 47
+                    stage            = 'pre-specify-generate'
+                    requestedContext = [ordered]@{
+                        VersionName                = $VersionName
+                        EnvironmentName            = $EnvironmentName
+                        ForceRebuild               = $ForceRebuild
+                        DetailedNavigation         = $DetailedNavigation
+                        AllowWideRebuildRequested  = $true
+                        AllowWideRebuildConfirmed  = $false
+                        ConfirmWideRebuildMode     = $confirmWideRebuildMode
+                    }
+                    observedContext  = [ordered]@{
+                        ActiveVersion     = $null
+                        ActiveEnvironment = $null
+                        SpecifyDone       = $false
+                        GenerateDone      = $false
+                    }
+                    resolvedPaths    = [ordered]@{
+                        GeneXusDir       = $resolvedGeneXusDir
+                        MsBuildPath      = $resolvedMsBuildPath
+                        KbPath           = $resolvedKbPath
+                        WorkingDirectory = $probeStage.Diagnostic.resolvedPaths.WorkingDirectory
+                        LogPath          = $resolvedLogPath
+                    }
+                    pathActions      = $probeStage.Diagnostic.pathActions
+                    artifacts        = [ordered]@{
+                        ProbeLogPath     = $probeLogPath
+                        MsBuildFilePath  = $null
+                        StdOutPath       = $null
+                        StdErrPath       = $null
+                        ExecutionLogPath = $resolvedLogPath
+                    }
+                    blockingReasons  = @($probeStage.Diagnostic.blockingReasons + $script:BlockingReasons)
+                    warnings         = @($probeStage.Diagnostic.warnings + $script:Warnings)
+                    strategyTrace    = @($probeStage.Diagnostic.strategyTrace + $script:StrategyTrace)
+                }
+                $abortedJson = ConvertTo-JsonText -InputObject $aborted
+                if (-not (Test-IsUnderProgramFilesX86 -PathValue $resolvedLogPath)) {
+                    Write-JsonLog -TargetLogPath $resolvedLogPath -JsonPayload $abortedJson
+                }
+                Write-Output $abortedJson
+                exit 47
+            }
+
+            $allowWideRebuildConfirmed = $true
+            Add-StrategyTrace -Message 'AllowWideRebuild confirmado pelo usuario interativamente via frase exata. ForceRebuild=true autorizado.'
+        }
+    } elseif ($AllowWideRebuild.IsPresent) {
+        Add-WarningMessage -Message '-AllowWideRebuild foi informado, mas ForceRebuild=false; o autorizador e redundante neste cenario (nenhuma regeneracao ampla foi solicitada). Para regenerar a KB inteira, passar tambem -ForceRebuild true.'
+        Add-StrategyTrace -Message '-AllowWideRebuild redundante: ForceRebuild=false, nenhuma regeneracao ampla a confirmar.'
+    }
+
     $msBuildFilePath = Join-Path $artifactDirectory 'specifygenerate.msbuild'
     $stdOutPath      = Join-Path $artifactDirectory 'msbuild.stdout.log'
     $stdErrPath      = Join-Path $artifactDirectory 'msbuild.stderr.log'
@@ -504,6 +741,28 @@ try {
     $stdErrFilteredNoise = [string]::Join("`n", ([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }))
     $stdErrFiltered      = ($stdErrText -replace '(?m)^context \[anonymous\] \d+:\d+ attribute component isn''t defined\r?\n?', '').Trim()
 
+    # Ruido estrutural do dotnet publish em Program Files\GAM\Platforms\NetCore* — assinatura
+    # de tres criterios simultaneos: error MSB3491 + is denied/acesso negado + caminho da
+    # instalacao do GeneXus contendo \Library\GAM\Platforms\. Linhas que casam todos os
+    # criterios sao removidas de stdout antes de classificar e listadas em stdoutFilteredNoise.
+    # Linhas que casem apenas alguns criterios permanecem como diagnostico legitimo.
+    # Cobertura empirica: o padrao foi verificado via BuildAll em 2026-05-12 (matriz 2x2
+    # KB/Environment); para SpecifyAll puro, ainda nao ha evidencia empirica de presenca
+    # ou ausencia deste ruido. O filtro e idempotente: se o ruido nao aparece, nada e
+    # removido; se aparecer, e removido com a mesma assinatura precisa.
+    $stdOutLines             = if ([string]::IsNullOrEmpty($stdOutText)) { @() } else { $stdOutText -split "`r?`n" }
+    $stdOutNoiseLines        = @()
+    $stdOutNonNoiseLines     = @()
+    foreach ($line in $stdOutLines) {
+        $isGamNoise = ($line -match 'error MSB3491') -and
+                      (($line -match 'is denied') -or ($line -match 'acesso negado')) -and
+                      ($line -match '\\GeneXus\\') -and
+                      ($line -match '\\Library\\GAM\\Platforms\\')
+        if ($isGamNoise) { $stdOutNoiseLines += $line } else { $stdOutNonNoiseLines += $line }
+    }
+    $stdOutFilteredNoise = ($stdOutNoiseLines -join "`n")
+    $stdOutFiltered      = ($stdOutNonNoiseLines -join "`n")
+
     $specifyDoneMarker  = Get-MarkerValue -Text $stdOutText -Marker '__SPECIFY_DONE__='
     $generateDoneMarker = Get-MarkerValue -Text $stdOutText -Marker '__GENERATE_DONE__='
     $specifyDone  = ($specifyDoneMarker -eq 'true')
@@ -519,17 +778,41 @@ try {
         Add-WarningMessage -Message 'Environment solicitado, mas o retorno de GetActiveEnvironment veio vazio.'
     }
 
-    $buildStatus = Resolve-BuildStatus -MsBuildExitCode $msBuildExitCode -SpecifyDone $specifyDone -GenerateDone $generateDone -StdOutText $stdOutText -StdErrText $stdErrFiltered
+    $buildStatus = Resolve-BuildStatus -MsBuildExitCode $msBuildExitCode -SpecifyDone $specifyDone -GenerateDone $generateDone -StdOutText $stdOutFiltered -StdErrText $stdErrFiltered
 
     $stdOutBlockingPatternRegex = 'Access denied|error MSB|: error |FAILED|at System\.|at Microsoft\.'
-    $blockingPatternMatch       = [regex]::Match($stdOutText, $stdOutBlockingPatternRegex)
+    $blockingPatternMatch       = [regex]::Match($stdOutFiltered, $stdOutBlockingPatternRegex)
     $detectedBlockingPattern    = if ($blockingPatternMatch.Success) { $blockingPatternMatch.Value } else { $null }
 
-    $postBuildEventLines = @([regex]::Matches($stdOutText, '(?im)^\s*(start\s+c:|start\s+cmd)[^\r\n]*') |
+    # Inclui linhas prefixadas com REM: o GeneXus encena assim quando o comando pos-build
+    # foi tentado mas falhou (ex.: .Bat ausente). Marca essas com sufixo "(commented) "
+    # para o consumidor distinguir entre executou vs apenas tentou.
+    $postBuildEventLines = @([regex]::Matches($stdOutFiltered, '(?im)^\s*(REM\s+)?(start\s+c:|start\s+cmd)[^\r\n]*') |
+                             ForEach-Object {
+                                 $value = $_.Value.Trim()
+                                 if ($value -match '^(?i)REM\s+') { "(commented) $value" } else { $value }
+                             })
+
+    $buildWarningLines   = @([regex]::Matches($stdOutFiltered, '(?m)[^\r\n]*\(\d+,\d+\)\s*:\s*warning\s*:[^\r\n]*') |
                              ForEach-Object { $_.Value.Trim() })
 
-    $buildWarningLines   = @([regex]::Matches($stdOutText, '(?m)[^\r\n]*\(\d+,\d+\)\s*:\s*warning\s*:[^\r\n]*') |
-                             ForEach-Object { $_.Value.Trim() })
+    # Promover warnings pmm00xx (versao de modulo GeneXus) a alertas top-level.
+    # pmm00xx aparecem em buildWarnings mas o usuario nao costuma inspecionar essa
+    # lista interna. Surfacing-los em warnings garante visibilidade no resumo do
+    # JSON. Resolucao tipica: 'Update Modules' na IDE. pmm0045 (inversao de versao)
+    # merece texto mais explicito porque sinaliza estado nao trivial (modulo
+    # satelite exige versao MAIS NOVA do modulo principal do que a instalada).
+    foreach ($wLine in $buildWarningLines) {
+        if ($wLine -match 'warning\s*:\s*(pmm\d{4}):\s*([^\r\n]+)') {
+            $pmmCode = $matches[1]
+            $pmmMsg  = $matches[2].Trim()
+            if ($pmmCode -eq 'pmm0045') {
+                Add-WarningMessage -Message "Alerta de inversao de versao de modulo ($pmmCode): $pmmMsg Modulo satelite exige versao MAIS NOVA do modulo principal — pode exigir update do GeneXus instalado ou downgrade de modulos da KB. Inspecionar via 'Update Modules' na IDE."
+            } else {
+                Add-WarningMessage -Message "Alerta de versao de modulo ($pmmCode): $pmmMsg Resolver via 'Update Modules' na IDE."
+            }
+        }
+    }
 
     if ($buildStatus.ExitCode -ne 0) {
         Add-BlockingReason -Reason ('Execução MSBuild terminou com exitCode {0}. Status: {1}.' -f $msBuildExitCode, $buildStatus.Status)
@@ -541,10 +824,13 @@ try {
         exitCode         = $buildStatus.ExitCode
         stage            = 'specify-generate'
         requestedContext = [ordered]@{
-            VersionName        = $VersionName
-            EnvironmentName    = $EnvironmentName
-            ForceRebuild       = $ForceRebuild
-            DetailedNavigation = $DetailedNavigation
+            VersionName                = $VersionName
+            EnvironmentName            = $EnvironmentName
+            ForceRebuild               = $ForceRebuild
+            DetailedNavigation         = $DetailedNavigation
+            AllowWideRebuildRequested  = $AllowWideRebuild.IsPresent
+            AllowWideRebuildConfirmed  = $allowWideRebuildConfirmed
+            ConfirmWideRebuildMode     = $confirmWideRebuildMode
         }
         observedContext  = [ordered]@{
             ActiveVersion     = $activeVersionOutput
@@ -573,6 +859,7 @@ try {
             postBuildEvents = $postBuildEventLines
             buildWarnings   = $buildWarningLines
         }
+        stdoutFilteredNoise  = Split-NonEmptyLines -Text $stdOutFilteredNoise
         stderrContent        = Split-NonEmptyLines -Text $stdErrFiltered
         stderrFilteredNoise  = Split-NonEmptyLines -Text $stdErrFilteredNoise
         blockingReasons  = @($probeStage.Diagnostic.blockingReasons + $script:BlockingReasons)
@@ -598,10 +885,13 @@ catch {
         exitCode         = 90
         stage            = 'specify-generate'
         requestedContext = [ordered]@{
-            VersionName        = $VersionName
-            EnvironmentName    = $EnvironmentName
-            ForceRebuild       = $ForceRebuild
-            DetailedNavigation = $DetailedNavigation
+            VersionName                = $VersionName
+            EnvironmentName            = $EnvironmentName
+            ForceRebuild               = $ForceRebuild
+            DetailedNavigation         = $DetailedNavigation
+            AllowWideRebuildRequested  = $AllowWideRebuild.IsPresent
+            AllowWideRebuildConfirmed  = $allowWideRebuildConfirmed
+            ConfirmWideRebuildMode     = $confirmWideRebuildMode
         }
         resolvedPaths    = [ordered]@{
             GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -625,6 +915,7 @@ catch {
             postBuildEvents = @()
             buildWarnings   = @()
         }
+        stdoutFilteredNoise  = @()
         stderrContent        = @()
         stderrFilteredNoise  = @()
         blockingReasons  = @($_.Exception.Message)

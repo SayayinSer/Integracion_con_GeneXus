@@ -102,6 +102,7 @@ Do NOT use esta skill para:
 - Normalizar recortes multiplos de `IncludeItems` e `ExcludeItems` como lista antes de serializar para a task carregada
 - Preservar `importedItems` como lista em qualquer diagnóstico JSON, mesmo quando houver apenas um item
 - Declarar `importação real efetiva provada` apenas quando `importedItems` contiver explicitamente o objeto esperado; `exitCode=0` com `importedItems` ausente ou vazio classifica como `sucesso operacional sem prova de import efetivo` — nunca como import concluído
+- Quando o `Invoke-GeneXusXpzImport.ps1` lançar exceção interna durante o pós-processamento (ex: `Exception calling Join`, falha de serialização do `import.json`, qualquer falha posterior à conclusão da task `Import` do MSBuild) mas o log bruto (`msbuild.stdout.log` ou stdout capturado) contiver `__IMPORTED_ITEM__` ou marca equivalente para o objeto esperado, classificar como `importação real efetiva provada por evidência de stdout (falha no pós-processamento do wrapper)` — nunca como `falha operacional` nem como `sucesso operacional sem prova de import efetivo`; a importação real aconteceu de fato, o que falhou foi a montagem do diagnóstico estruturado pelo wrapper; declarar explicitamente que `importedItems` veio do log bruto e que o `import.json` está degradado ou ausente; registrar a exceção do wrapper como degradação de diagnóstico separada, não como causa de falha de import
 - Quando a task carregada não expuser `UpdateFile` nem `ImportKBInformation`, o wrapper de preview deve bloquear esses parâmetros cedo
 - Tratar `Get*Property` como operação de leitura segura, sem efeito sobre a KB
 - Não usar o valor retornado por `GetVersionProperty -Name Name` como `-VersionName` em exportação ou importação; esse valor é o nome descritivo da versão (ex: `"Design"`), não o identificador aceito por `SetActiveVersion` (ex: `"wsEducacaoSpTeste"`); para obter o identificador compatível, usar `GetActiveVersion`
@@ -121,7 +122,7 @@ Do NOT use esta skill para:
 - Responda no idioma do usuário
 - Seja direto sobre estado operacional, riscos e limites
 - Declare quando o resultado é apenas operacional e ainda depende de confirmação funcional
-- Em operações de import, declare o sub-estado explicitamente pelo nome (`importação real efetiva provada`, `sucesso operacional sem prova de import efetivo`, `importação real efetiva provada, efeito não confirmado na IDE`, `importação real efetiva provada, geração de runtime pendente`, `importação real falhou por source`, etc.) — não deixe o leitor inferir o nível de prova a partir do relato narrativo
+- Em operações de import, declare o sub-estado explicitamente pelo nome (`importação real efetiva provada`, `importação real efetiva provada por evidência de stdout (falha no pós-processamento do wrapper)`, `sucesso operacional sem prova de import efetivo`, `importação real efetiva provada, efeito não confirmado na IDE`, `importação real efetiva provada, geração de runtime pendente`, `importação real falhou por source`, etc.) — não deixe o leitor inferir o nível de prova a partir do relato narrativo
 - Quando o usuário quiser evidência complementar além de `importedItems`, apresentar as duas opções em paralelo: acionar `xpz-msbuild-build` (headless) ou abrir a KB na IDE e executar o build por lá — ambas são opcionais e o resultado do build não reescreve nem substitui o sub-estado de import já declarado
 - Quando o sub-estado for `importação real efetiva provada`, build tiver sido executado e o usuário reportar que o comportamento ainda não mudou, oferecer explicitamente a `checagem de frescor de runtime` como próximo passo nomeado antes de sugerir nova edição; declarar nominalmente o que será verificado: `nav_objs.xml` (`ObjStatus=genreq` indica geração pendente; `ObjStatus=nogenreq` indica gerado) e timestamps dos artefatos gerados (`.cs`, `.aspx` ou equivalente); NVG excluído por não ser acessível sem abrir a IDE; se a checagem indicar artefatos de versão anterior, classificar como `importação real efetiva provada, geração de runtime pendente` e propor reabertura + rebuild antes de qualquer nova edição
 - Quando a rodada for `ensaio metodológico/experimental`, declarar isso nominalmente no resumo e separar:
@@ -162,7 +163,7 @@ Arquivos de referência e quando carregar:
 
 ## EXPECTED INTERFACE
 
-Esta skill assume, como interface operacional, scripts pequenos e explicitamente parametrizados. `Test-GeneXusMsBuildSetup.ps1`, `Open-GeneXusKbHeadless.ps1`, `Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzExport.ps1`, `Invoke-GeneXusXpzImport.ps1`, `Test-GeneXusKbConsistency.ps1`, `Test-GeneXusImportFileEnvelope.ps1`, `Watch-GeneXusMsBuildLog.ps1` e `Test-GeneXusRuntimeFreshness.ps1` já foram materializados nesta fase; os demais não devem ser tratados como já implementados sem confirmação explícita.
+Esta skill assume, como interface operacional, scripts pequenos e explicitamente parametrizados. `Test-GeneXusMsBuildSetup.ps1`, `Open-GeneXusKbHeadless.ps1`, `Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzExport.ps1`, `Invoke-GeneXusXpzImport.ps1`, `Test-GeneXusKbConsistency.ps1`, `Test-GeneXusImportFileEnvelope.ps1`, `Watch-GeneXusMsBuildLog.ps1` e `Test-GeneXusRuntimeFreshness.ps1` já foram materializados nesta fase; os demais não devem ser tratados como já implementados sem confirmação explícita. Os motores de montagem de `import_file.xml` referenciados no fluxo preferido (`Build-GeneXusImportFileEnvelope.ps1` para montagem direta a partir de XMLs de objeto e template clonável, `New-XpzImportPackage.ps1` como wrapper PowerShell do motor Python `New-XpzImportPackage.py` para montagem por frente da pasta paralela) também estão materializados em `scripts/` e são cobertos pela skill `xpz-builder` e pelas regras operacionais em `02-regras-operacionais-e-runtime.md`; quando esta skill aponta para eles (anti-padrão de export-casca, inventário pré-import), trata-se de uso operacional vigente, não de promessa aspiracional.
 
 Estado atual da materialização:
 
@@ -188,6 +189,7 @@ Scripts nesta frente:
   - status atual: implementado para exportação headless de XPZ com parâmetros explícitos e validação da task carregada
 - `Invoke-GeneXusXpzImport.ps1`
   - status atual: implementado para importação real de XPZ com parâmetros explícitos e diagnóstico JSON
+  - contrato de resiliência do pós-processamento: o bloco que faz parse do stdout, monta `importedItems` e serializa o diagnóstico JSON deve ser envolvido em `try/catch`; em caso de exceção interna (ex: `Exception calling Join` por entrada inesperada, falha de serialização, qualquer erro posterior à conclusão da task `Import` do MSBuild), o script não deve perder a evidência já coletada — deve emitir um diagnóstico parcial contendo no mínimo: `exitCode` real do MSBuild, caminho do `msbuild.stdout.log`, lista de marcas `__IMPORTED_ITEM__` extraídas diretamente do log bruto antes da exceção (quando disponível), marca explícita `postProcessingFailed=true`, mensagem da exceção e indicação de que `importedItems` deve ser confirmado por leitura do log bruto; o agente que consumir esse diagnóstico parcial aplica o sub-estado `importação real efetiva provada por evidência de stdout (falha no pós-processamento do wrapper)` quando o log bruto contiver evidência do objeto esperado, conforme regra em RESPONSIBILITIES; nunca substituir o `exitCode` real por código de exceção do PowerShell — o `exitCode` do MSBuild é evidência primária de que a task de import concluiu
 - `Test-GeneXusKbConsistency.ps1`
   - status atual: implementado; classifica KB consistente, inconsistências detectadas, check parcial por timeout da Etapa 3 e KB inacessível; `Fix="true"` exige confirmação interativa
 - `Test-GeneXusImportFileEnvelope.ps1`
@@ -241,7 +243,7 @@ Parâmetros transversais esperados:
 Parâmetros específicos de exportação:
 
 - `-XpzPath`
-- `-ObjectList` — lista de objetos para exportação seletiva; para múltiplos objetos, separar entradas com ponto-e-vírgula (`;`) no formato `Tipo:Nome`; exemplo: `Procedure:ProcA;WebPanel:WPB;Transaction:TrC`; após a exportação, verificar o `.xpz` gerado para confirmar que todos os objetos solicitados estão presentes no pacote; quando exportar um único objeto, o formato `Tipo:Nome` continua válido sem separador
+- `-ObjectList` — lista de objetos para exportação seletiva; para múltiplos objetos, separar entradas com ponto-e-vírgula (`;`) no formato `Tipo:Nome`; exemplo: `Procedure:ProcA;WebPanel:WPB;Transaction:TrC`; após a exportação, **inspecionar o `.xpz` por completo**: (1) confirmar que todos os objetos solicitados estão presentes; (2) **listar todos os objetos** que o pacote efetivamente contém e confrontar com a intenção da rodada — a exportação parcial pode incluir **dependências, referências ou objetos ligados** consoante `DependencyType`, `ReferenceType` e defaults da task; **nunca** assumir que o pacote tem só os itens da lista sem ler o artefato; quando exportar um único objeto, o formato `Tipo:Nome` continua válido sem separador
 - `-DependencyType`
 - `-ReferenceType`
 - `-ExportKbInfo`
@@ -257,6 +259,27 @@ Parâmetros específicos de importação:
 - `-AutomaticBackup`
 - `-ImportType`
 - `-ImportKbInformation`
+
+---
+
+## INVENTÁRIO DO PACOTE ANTES DO IMPORT REAL
+
+- O gate `Test-GeneXusImportFileEnvelope.ps1` valida estrutura do envelope; **não substitui** a verificação do **conjunto de objetos** que efetivamente seria aplicado à KB na importação.
+- **Checklist obrigatório** antes de **importação real** quando o pacote **não** foi montado na mesma rodada pelo fluxo `xpz-builder` com manifesto explícito na conversa (objetos + intenção do lote):
+  - Extrair a lista completa de objetos no `<ExportFile>` (por exemplo todos os `<Object` sob `<Objects>`, ou conteúdo equivalente dentro do `.xpz`).
+  - Confrontar com o **delta declarado** / pedido do utilizador (tipo e nome de cada objeto em foco). Cada objeto **extra** deve ser classificado no espírito de `xpz-builder` como mudança pedida, auxiliar necessária ou **extra não pedida**; se for **extra não pedida** num pacote que o utilizador descreveu como correção pontual ou cirúrgica → **ABORT** salvo confirmação explícita.
+  - Se aparecer **módulo de sistema / plataforma** GeneXus (por exemplo `Module:GeneXus`, ou outro `Module` claramente de plataforma segundo o catálogo operacional em `xpz-builder` / `06-padroes-de-objeto-e-nomenclatura.md`) num pacote tratado como delta mínimo → **ABORT** salvo pedido explícito desse conteúdo.
+- **Recomendado** executar o mesmo inventário antes de `PreviewMode` quando o pacote veio de **export MSBuild**, **reempacotamento manual** ou qualquer fluxo em que o agente não controlou fecho do lote na conversa.
+- **Exportação com lista explícita (`-ObjectList` / `Objects`) não garante** pacote com um único objeto nem equivalência “lista nominal = conteúdo do zip”. **Nunca** tratar tudo o que veio no pacote como intencional sem esse confronto.
+
+### Anti-padrão (nomeado): export MSBuild como “casca” + patch + import
+
+- **Evitar:** exportar da KB só para obter um `.xpz`, substituir manualmente o nó de um `<Object>` pelo XML da pasta paralela, reempacotar e importar **sem** inventário completo e **sem** alinhamento ao manifesto / delta.
+- Quando o XML autoritativo já está na pasta paralela (`ObjetosDaKbEmXml` ou área de geração local), o caminho preferido para import headless é montar **`import_file.xml`** com motor estruturado compartilhado: `Build-GeneXusImportFileEnvelope.ps1` para montagem direta a partir de XMLs de objeto e template válido, ou `New-XpzImportPackage.ps1`/`.py` para montagem por frente em `ObjetosGeradosParaImportacaoNaKbNoGenexus` usando `kb-source-metadata.md` ou `-TemplatePackagePath` (skill `xpz-builder`, metadados em `kb-source-metadata.md` quando aplicável), em vez de fabricar `.xpz` por export só para servir de envelope.
+
+### Exportação headless e alinhamento ao pedido
+
+- **Não** iniciar exportação headless da KB como passo próprio quando o utilizador pediu **apenas** importar alterações já existentes na pasta paralela, **salvo** pedido explícito de exportação ou **confirmação explícita** de que a exportação é indispensável (por exemplo impossibilidade documentada de obter `KMW`/`Source`/identidade de envelope por outro meio).
 
 ---
 
@@ -286,6 +309,7 @@ Parâmetros específicos de importação:
      - `apto para prosseguir` → prosseguir normalmente
    - Este gate é não invasivo: lê apenas o arquivo local, não abre KB, não requer GeneXus instalado
    - Aplicar mesmo quando o arquivo vier de geração anterior já validada — o gate é obrigatório por rodada, não por sessão
+6c. Antes de **importação real**: executar o **inventário do pacote** (lista completa de objetos no envelope) e confrontá-lo com o delta declarado, conforme a secção **Inventário do pacote antes do import real**. Se o pacote contiver extras não conciliados ou módulo de sistema não pedido num pacote cirúrgico, **ABORT** salvo confirmação explícita do utilizador. Omitir este passo apenas quando o pacote foi gerado na mesma rodada pelo fluxo `xpz-builder` com manifesto na conversa que já feche o lote esperado.
 7. Só depois abrir a KB e confirmar versão ativa e `Environment` ativo quando aplicável
    Quando o objetivo for confirmar versão e Environment para usar em `-VersionName`/`-EnvironmentName`, usar `GetActiveVersion` e `GetActiveEnvironment` — nunca `GetVersionProperty -Name Name` nem `GetEnvironmentProperty -Name Name`, pois esses retornam propriedades de metadados incompatíveis com o identificador aceito por `SetActiveVersion`/`SetActiveEnvironment` (verificado empiricamente: `GetVersionProperty -Name Name` retornou `"Design"` enquanto `GetActiveVersion` retornou `"wsEducacaoSpTeste"` na mesma KB)
 8. Se o objetivo for inspeção, priorizar:
@@ -309,6 +333,7 @@ Parâmetros específicos de importação:
    - `importação real efetiva provada, efeito não confirmado na IDE` — `importedItems` contém o objeto esperado, mas build ou execução na IDE ainda exibe comportamento da versão anterior; verificar se KB foi reaberta e se build foi executado após reabertura antes de suspeitar de falha de import
    - `importação real efetiva provada, geração de runtime pendente` — `importedItems` contém o objeto esperado, build foi executado após reabertura, mas artefatos de runtime ainda refletem versão anterior; indicadores: objeto em `nav_objs.xml` (raiz da KB nativa) com `ObjStatus=genreq` (GeneXus marcou o objeto como pendente de geração), timestamp dos artefatos gerados (`.cs`, `.aspx` ou equivalente) anterior ao timestamp do import; NVG não integra o diagnóstico somente leitura — é gerado ao abrir a KB na IDE e não é um arquivo estático; tratar como camada de diagnóstico separada do sub-estado de import e do diagnóstico de IDE desatualizada; diagnosticar pela checagem de frescor de runtime (somente leitura) antes de propor nova edição
    - `sucesso operacional sem prova de import efetivo` — `exitCode=0` mas `importedItems` ausente ou não contém o objeto esperado
+   - `importação real efetiva provada por evidência de stdout (falha no pós-processamento do wrapper)` — o log bruto (`msbuild.stdout.log` ou stdout capturado) contém `__IMPORTED_ITEM__` ou marca equivalente para o objeto esperado, mas o wrapper lançou exceção interna durante o pós-processamento (ex: `Exception calling Join`, falha de serialização do `import.json`) impedindo que `importedItems` fosse populado no diagnóstico estruturado; a importação real aconteceu — o que falhou foi a camada de diagnóstico do wrapper; declarar nominalmente a origem da evidência (log bruto) e a exceção do wrapper como degradação de diagnóstico separada
    - `importação real falhou por source` — erro rastreável ao conteúdo do objeto importado
    - `importação real falhou por envelope` — erro na estrutura ou envelope do XPZ
    - `importação real falhou sem importedItems` — falha sem trilha de `importedItems` no log
@@ -396,12 +421,17 @@ Após a limpeza, reaplicar WWP na Transaction final para regenerar base consiste
 - [ ] `stdoutSignals`, `stderrContent`, `stderrFilteredNoise`, `exitCode`, `.msbuild` e log foram registrados
 - [ ] O resultado foi separado entre sucesso operacional e confirmação funcional
 - [ ] O resultado de import foi classificado com sub-estado explícito: `importação real efetiva provada`, `sucesso operacional sem prova de import efetivo` ou sub-estado de falha com causa nomeada — nunca apenas `sucesso operacional` ou `falha operacional` para operações de import
+- [ ] Quando o wrapper lançou exceção interna durante o pós-processamento mas o log bruto contém `__IMPORTED_ITEM__` para o objeto esperado, o sub-estado declarado foi `importação real efetiva provada por evidência de stdout (falha no pós-processamento do wrapper)` — nunca `falha operacional` nem `sucesso operacional sem prova de import efetivo`; a origem da evidência (log bruto) e a exceção do wrapper foram declaradas explicitamente como camadas separadas
+- [ ] O script `Invoke-GeneXusXpzImport.ps1` em uso tem o pós-processamento envolvido em `try/catch` e emite diagnóstico parcial com `exitCode` real, marcas brutas extraídas do log e `postProcessingFailed=true` em caso de exceção — não perde toda a evidência por falha de serialização
 - [ ] Quando o sub-estado for `importação real efetiva provada` e o usuário não observar o efeito na IDE, o diagnóstico de IDE desatualizada foi tratado como camada separada — não como revisão do sub-estado de import
 - [ ] Quando o sub-estado for `importação real efetiva provada`, build tiver sido executado e o usuário reportar que o comportamento ainda não mudou, a `checagem de frescor de runtime` foi oferecida como próximo passo nomeado antes de sugerir nova edição
 - [ ] O sub-estado `importação real efetiva provada, geração de runtime pendente` foi aplicado quando artefatos de runtime (`nav_objs.xml` com `ObjStatus=genreq` ou timestamps de artefatos gerados anteriores ao import) ainda refletiam versão anterior após build confirmado; NVG pode ser consultado manualmente como indicador complementar, mas não integra a checagem somente leitura automatizada
-- [ ] Quando `-ObjectList` foi usado com múltiplos objetos, o formato `Tipo:Nome` separado por `;` foi documentado ou validado; e o `.xpz` gerado foi verificado para confirmar presença de todos os objetos solicitados
+- [ ] Quando `-ObjectList` foi usado (um ou mais objetos), o formato `Tipo:Nome` e separadores foram validados; o `.xpz` foi inspecionado para confirmar presença dos solicitados **e** listar **todos** os objetos do pacote (extras por dependência não são intencionais por defeito)
 - [ ] Quando `-VersionName` ou `-EnvironmentName` foram informados explicitamente, confirmar que o valor veio de `GetActiveVersion`/`GetActiveEnvironment` ou de fonte comprovadamente compatível com `SetActiveVersion`/`SetActiveEnvironment` — nunca de `GetVersionProperty -Name Name` nem de `GetEnvironmentProperty -Name Name`
 - [ ] Quando a frente foi descrita por fluxo funcional e o usuário reportar "não mudou no navegador" após import confirmado, foi verificado primeiro (1) se o objeto importado é o alvo executado pelo fluxo real, antes de (2) checar frescor de runtime ou (3) propor nova edição
+- [ ] Antes de importação real, o inventário completo de objetos no pacote foi confrontado com o delta declarado (ou o pacote veio da mesma rodada `xpz-builder` com manifesto que fecha o lote)
+- [ ] Quando o pacote veio de export MSBuild ou reempacotamento manual, não se assumiu que o conteúdo coincide com a lista nominal nem que extras eram intencionais sem confirmação
+- [ ] Exportação headless não foi executada sem pedido ou confirmação explícita quando o objetivo do utilizador era apenas importar XML já existente na pasta paralela
 
 ---
 
@@ -417,3 +447,7 @@ Após a limpeza, reaplicar WWP na Transaction final para regenerar base consiste
 - ABORT se não houver ambiente controlado compatível com a fase solicitada
 - ABORT se a operação não puder produzir trilha rastreável de logs e artefatos
 - ABORT se `Test-GeneXusImportFileEnvelope.ps1` retornar `não apto para prosseguir`
+- NEVER prosseguir para **importação real** com pacote montado como export MSBuild + substituição manual de conteúdo + reempacotamento **sem** inventário completo dos objetos no pacote e conciliação explícita com o delta
+- NEVER assumir que `-ObjectList` (ou lista equivalente) com uma única entrada produz `.xpz` contendo **apenas** esse objeto
+- NEVER invocar exportação headless da KB quando o utilizador pediu **somente** importar alterações já existentes na pasta paralela, salvo pedido explícito de exportação ou confirmação explícita de que a exportação é indispensável para obter envelope/metadata utilizável
+- NEVER incluir em pacote tratado como **delta cirúrgico** objetos de módulo de sistema ou plataforma GeneXus (por exemplo `Module:GeneXus`) salvo pedido explícito do utilizador

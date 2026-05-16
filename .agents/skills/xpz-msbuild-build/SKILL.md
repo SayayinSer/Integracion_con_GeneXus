@@ -32,7 +32,12 @@ classificação rastreável de resultado e bloqueio de reorg por padrão. Use
 `Invoke-GeneXusKbSpecifyGenerate.ps1` para verificação pós-import — menos invasiva que
 `BuildAll` quando não há alterações estruturais pendentes no banco, mas **capaz de
 disparar reorg real** quando o modelo as contém. Use `Invoke-GeneXusKbBuildAll.ps1`
-para validação completa. Nunca execute reorg sem autorização explícita do usuário.
+para BuildAll incremental (equivalente à opção `Build All` do menu Build da IDE
+GeneXus — compila apenas objetos alterados desde o último build, fluxo costumeiro
+pós-edição/pós-import). `-ForceRebuild=true` é uma operação distinta: equivale a
+`Rebuild All` da IDE — regenera **TODOS** os objetos da KB, podendo durar horas em KB
+grande; só pode ser habilitado via `-AllowWideRebuild` com confirmação explícita do
+usuário por frase exata. Nunca execute reorg sem autorização explícita do usuário.
 Quando houver evidência de alteração estrutural de atributo no import recente, exigir
 confirmação explícita do usuário antes de chamar `Invoke-GeneXusKbSpecifyGenerate.ps1`.
 `BuildAll` sem watcher visível não é fluxo válido. Use `-StartWatcher` ao chamar
@@ -93,6 +98,12 @@ Do NOT use esta skill para:
 - Usar `FailIfReorg=true` como default de `BuildAll` — nunca alterar sem instrução explícita
 - Nunca emitir `DoNotExecuteReorg=false` implicitamente: reorg só executa quando o
   usuário pedir explicitamente com plena ciência do efeito
+- Tratar `-ForceRebuild=true` como operação ampla análoga a reorg autorizada: bloqueada
+  por default e habilitada apenas via `-AllowWideRebuild` com confirmação explícita do
+  usuário por frase exata (modo interativo) ou `-AllowWideRebuild -ConfirmWideRebuild`
+  apos confirmar com o usuário humano (modo não-interativo). Nunca emitir `ForceRebuild=true`
+  implicitamente em fluxo pós-import nem em validação cotidiana — `BuildAll` incremental
+  é o suficiente
 - Distinguir claramente:
   - sucesso operacional da chamada MSBuild
   - efeito funcional observado depois no GeneXus
@@ -170,12 +181,27 @@ WORKFLOW e nota de comportamento crítico abaixo.
 
 **Parâmetros específicos:**
 
-- `-ForceRebuild` (Boolean, default `false`)
+- `-ForceRebuild` (Boolean, default `false` — quando `true`, equivale a `Rebuild All`
+  da IDE: muda `SpecifyAll`/`GenerateOnly` de incremental para regeneração total de
+  TODOS os objetos da KB; em KB grande pode levar horas; **só pode ser habilitado via
+  `-AllowWideRebuild`** — tentativa sem essa autorização é bloqueada por política
+  com exit 46)
 - `-DetailedNavigation` (Boolean, default `false`)
+- `-AllowWideRebuild` (switch — único caminho autorizado para habilitar
+  `-ForceRebuild true`; em modo interativo exige que o usuário digite a frase exata
+  `entendo que isto pode regerar a KB inteira e aceito o custo`; em modo não-interativo
+  requer `-ConfirmWideRebuild`; com `ForceRebuild=false`, o switch é redundante: o
+  wrapper registra warning em `warnings`, não pede a frase exata e mantém
+  `AllowWideRebuildConfirmed=false`)
+- `-ConfirmWideRebuild` (switch — usado em conjunto com `-AllowWideRebuild` para
+  dispensar o `Read-Host` interativo da frase de confirmação; destina-se a processos
+  desanexados onde não há terminal disponível; proibido sem `-AllowWideRebuild`; o
+  chamador é responsável por confirmar com o usuário humano antes de passar este
+  parâmetro)
 
 **Categorias de resultado:**
 
-- `specify e generate concluídos` — ambas as etapas passaram com exitCode 0, sem padrões de alerta em stdout e sem conteúdo real em stderr após filtro de ruído estrutural conhecido (ver padrão abaixo)
+- `specify e generate concluídos` — ambas as etapas passaram com exitCode 0, stdout sem padrões de alerta após filtro de ruído estrutural conhecido em stdout (ver padrões abaixo) e sem conteúdo real em stderr após filtro de ruído estrutural conhecido
 - `reorg detectada ou executada` — padrão `Reorganiza` encontrado em stdout; `SpecifyAll` disparou reorganização real de banco de dados; não declarar sucesso; apresentar ao usuário e aguardar instrução explícita
 - `operação concluída, pendente de confirmação funcional` — exitCode 0, mas impedimentos detectados: stderr não vazio, padrões de alerta (`Access denied`) ou eventos pós-build em stdout
 - `erro de specify` — `SpecifyAll` falhou; objetos com referências inválidas ou inconsistência
@@ -192,10 +218,19 @@ WORKFLOW e nota de comportamento crítico abaixo.
 > `FailIfReorg` nem equivalente — ao contrário de `BuildAll`. A classificação
 > `reorg detectada ou executada` sinaliza este cenário como bloqueante.
 
-> **Padrão conhecido:** `dotnet publish` dentro de `GAM\Platforms\*` pode registrar
-> `Access denied` em stdout com exitCode 0. Esse padrão não é erro de specify/generate,
-> mas impede classificar como `specify e generate concluídos` — usar `operação concluída,
-> pendente de confirmação funcional` e listar o padrão encontrado no diagnóstico.
+> **Padrão conhecido — ruído estrutural do `dotnet publish` em `GAM\Platforms\NetCore*` (stdout):**
+> Mesmo padrão e mesma lógica de filtro documentados em detalhe na seção
+> `Invoke-GeneXusKbBuildAll.ps1` (assinatura: `MSB3491` + mensagem de acesso negado +
+> caminho contendo `\GeneXus\...\Library\GAM\Platforms\`). `Invoke-GeneXusKbSpecifyGenerate.ps1`
+> aplica o mesmo filtro e popula `stdoutFilteredNoise` no diagnóstico.
+>
+> **Cobertura empírica:** a evidência da matriz 2×2 foi coletada via `BuildAll`. Não foi
+> verificado empiricamente se `SpecifyAll` puro (sem compile) também dispara a fase de
+> `Inicialização Integrada de Segurança` que origina o ruído. O filtro é seguro de qualquer
+> forma: se o ruído não aparecer no fluxo `SpecifyGenerate`, o filtro é idempotente (não
+> remove nada que não esteja lá); se aparecer, é removido com a mesma assinatura precisa.
+> Quando houver primeira execução real que confirme presença ou ausência do ruído neste
+> fluxo, atualizar a evidência empírica acima.
 
 > **Padrão conhecido — ruído estrutural do GeneXus 18 em stderr:**
 > O GeneXus 18 escreve exatamente 3 linhas `context [anonymous] 1:12 attribute component
@@ -206,14 +241,23 @@ WORKFLOW e nota de comportamento crítico abaixo.
 
 ### Invoke-GeneXusKbBuildAll.ps1
 
-Build completo: executa `BuildAll`, que faz specify + generate + compile e detecta (mas
-não executa por padrão) reorg necessária.
+Equivalente à opção `Build All` do menu Build da IDE GeneXus: executa `BuildAll`, que
+faz specify + generate + compile dos objetos alterados desde o último build (build
+incremental). Detecta — mas não executa por padrão — reorg necessária. Esta é a etapa
+cotidiana após import/edição. Para `Rebuild All` (regeneração total de TODOS os
+objetos), ver `-ForceRebuild` abaixo, que **só pode ser usado com `-AllowWideRebuild`
+e confirmação explícita** por frase exata.
 
 **Parâmetros transversais:** mesmos do `Invoke-GeneXusKbSpecifyGenerate.ps1`.
 
 **Parâmetros específicos:**
 
-- `-ForceRebuild` (Boolean, default `false`)
+- `-ForceRebuild` (Boolean, default `false` — quando `true`, equivale a `Rebuild All`
+  da IDE: muda a semântica de `BuildAll` incremental para regeneração total de TODOS
+  os objetos da KB, independentemente de mudança; em KB grande pode levar horas e
+  regenerar centenas/milhares de objetos, incluindo subtype groups; **só pode ser
+  habilitado via `-AllowWideRebuild`** — tentativa sem essa autorização é bloqueada
+  por política com exit 46)
 - `-CompileMains` (Boolean, default `false` — compila apenas Developer Menu)
 - `-DetailedNavigation` (Boolean, default `false`)
 - `-FailIfReorg` (Boolean, default `true` — bloqueia build se houver reorg pendente)
@@ -226,6 +270,18 @@ não executa por padrão) reorg necessária.
   disponível, como quando `Watch-GeneXusMsBuildLog.ps1` roda em paralelo; proibido
   sem `-AllowReorg`; o chamador é responsável por confirmar com o usuário humano
   antes de passar este parâmetro)
+- `-AllowWideRebuild` (switch — único caminho autorizado para habilitar
+  `-ForceRebuild true`; em modo interativo exige que o usuário digite no terminal
+  a frase exata `entendo que isto pode regerar a KB inteira e aceito o custo`; em
+  modo não-interativo requer `-ConfirmWideRebuild`; gate independente do gate de
+  reorg — `-AllowReorg` não autoriza regeneração ampla, e `-AllowWideRebuild` não
+  autoriza reorg; com `ForceRebuild=false`, o switch é redundante: o wrapper registra
+  warning em `warnings`, não pede a frase exata e mantém `AllowWideRebuildConfirmed=false`)
+- `-ConfirmWideRebuild` (switch — usado em conjunto com `-AllowWideRebuild` para
+  dispensar o `Read-Host` interativo da frase de confirmação; destina-se a processos
+  desanexados onde não há terminal disponível; proibido sem `-AllowWideRebuild`; o
+  chamador é responsável por confirmar com o usuário humano com a frase exata antes
+  de passar este parâmetro)
 - `-Configuration` (String, opcional — valores válidos: `Release`, `Debug`,
   `Performance Test`; quando informado, emite `SetConfiguration` imediatamente antes
   do `BuildAll`; quando omitido, a configuração ativa da KB é mantida sem alteração)
@@ -260,7 +316,7 @@ não executa por padrão) reorg necessária.
 
 **Categorias de resultado:**
 
-- `compilou limpo` — `BuildAll` concluiu com exitCode 0, sem reorg detectada, stderr vazio após filtro de ruído estrutural conhecido (ver padrão abaixo) e sem padrões de erro em stdout
+- `compilou limpo` — `BuildAll` concluiu com exitCode 0, sem reorg detectada, stderr vazio após filtro de ruído estrutural conhecido e stdout sem padrões de erro após filtro de ruído estrutural conhecido em stdout (ver padrões abaixo)
 - `compilou com erros` — `BuildAll` falhou por erro de compilação
 - `reorg necessária detectada` — `FailIfReorg=true` bloqueou o build; reorg gerada mas
   não executada; usuário deve decidir o próximo passo
@@ -285,10 +341,58 @@ não executa por padrão) reorg necessária.
   detectada, mas stderr não vazio após filtro de ruído estrutural, ou marcador de
   conclusão não detectado; validação funcional depende de inspeção na IDE
 
-> **Padrão conhecido:** `dotnet publish` dentro de `GAM\Platforms\*` pode registrar
-> `Access denied` em stdout com exitCode 0. Esse padrão não é erro de compilação GeneXus,
-> mas impede classificar como `compilou limpo` — usar `operação concluída, pendente de
-> confirmação funcional` e listar o padrão encontrado no diagnóstico.
+> **Padrão conhecido — ruído estrutural do `dotnet publish` em `GAM\Platforms\NetCore*` (stdout):**
+> O `BuildAll` em environments .NET Core (NETPostgreSQL, NETCoreSQLServer e similares)
+> dispara, na fase `Inicialização Integrada de Segurança`, o comando:
+> ```
+> dotnet publish -nologo -v q -p:GenInit=false
+>   "C:\Program Files (x86)\GeneXus\GeneXus18\Library\GAM\Platforms\<NetCore*>\GxDeps.csproj"
+>   -o "C:\Program Files (x86)\GeneXus\GeneXus18\Library\GAM\Platforms\<NetCore*>"
+> ```
+> Quando o processo não roda elevado (ver Restrição Operacional de Leitura em
+> `10-base-operacional-msbuild-headless.md`), o `dotnet publish` falha com `error MSB3491`
+> ao tentar gravar `PublishOutputs.<hash>.txt` em `\Library\GAM\Platforms\build\GxDeps\obj\net*\`,
+> que está sob `C:\Program Files (x86)\` — área tratada como estritamente somente leitura
+> pela skill por política explícita. Apesar do erro, a fase reporta `Sucesso`, o GAM
+> permanece registrado normalmente e o build prossegue sem efeito funcional na KB.
+>
+> `Invoke-GeneXusKbBuildAll.ps1` filtra esse padrão antes de classificar o status. As
+> linhas removidas ficam em `stdoutFilteredNoise` do diagnóstico. Uma execução bem-sucedida
+> cujo único padrão bloqueante em stdout seja esse ruído é classificada como `compilou limpo`.
+>
+> **Assinatura do filtro (todos os critérios simultaneamente):**
+> - linha contém `error MSB3491`
+> - linha contém `is denied` (EN) **ou** `acesso negado` (PT-BR)
+> - linha referencia caminho contendo `\GeneXus\` **e** `\Library\GAM\Platforms\`
+>
+> Linhas que casem apenas alguns dos critérios (ex.: `MSB3491` em projeto da KB, ou
+> `Access denied` fora da árvore de instalação do GeneXus) **não são filtradas** — são
+> diagnósticos legítimos.
+
+> **Evidência empírica acumulada (ruído GAM/NetCore):**
+> Coleta controlada em 2026-05-12, GeneXus 18 Up 14, em duas KBs distintas e dois
+> environments cada (matriz 2×2):
+>
+> | KB | Environment | Generator | `MSB3491` em stdout |
+> |---|---|---|---|
+> | `wsEducacaoSpTeste` | `NETPostgreSQL` | .NET Core | presente |
+> | `wsEducacaoSpTeste` | `NETFrameworkSQLServer` | .NET Framework | ausente |
+> | `FabricaBrasil18` | `NETPostgreSQL` | .NET Core | presente |
+> | `FabricaBrasil18` | `.Net Environment` | .NET Framework | ausente |
+>
+> O arquivo target `PublishOutputs.<hash>.txt` é literalmente o mesmo entre KBs distintas
+> — é asset compartilhado da instalação do GeneXus, não da KB. A versão GAM no banco
+> (`4.1.5` em ambas) permanece idêntica antes e depois, com ou sem elevação. Comparação
+> elevado vs não-elevado em `wsEducacaoSpTeste/NETPostgreSQL` confirmou que a falha do
+> `dotnet publish` não tem efeito funcional observável: stdout difere em uma única linha
+> (a do `MSB3491`); todo o resto — versão GAM, warnings, fases, artefatos gerados em
+> `C:\KBs\<kb>\<env>\web\` — é idêntico.
+>
+> Conclusão: o ruído é determinístico, originário da política de leitura-apenas da
+> skill aplicada sobre `C:\Program Files (x86)\GeneXus\GeneXus18\Library\GAM\Platforms\`,
+> e sem consequência funcional. O filtro é seguro porque é ancorado em todos os três
+> critérios simultâneos (código, mensagem e caminho de instalação), não no padrão
+> genérico `Access denied`.
 
 > **Padrão conhecido — ruído estrutural do GeneXus 18 em stderr:**
 > O GeneXus 18 escreve exatamente 3 linhas `context [anonymous] 1:12 attribute component
@@ -500,9 +604,18 @@ Campos relevantes:
 - `timing.msbuildDurationSeconds` — duração do MSBuild em segundos
 - `timing.phases` — lista de fases com `name`, `start`, `end`, `durationSeconds`
 - `observedContext.ReorgDetected` — se reorg foi detectada
-- `stdoutSignals` — sinais estruturados de stdout: `blockingPattern` (primeiro padrão bloqueante detectado, ou `null`), `postBuildEvents` (linhas `start c:` / `start cmd`), `buildWarnings` (linhas de warning com posição)
+- `stdoutSignals` — sinais estruturados de stdout: `blockingPattern` (primeiro padrão bloqueante detectado APÓS filtro de ruído estrutural, ou `null`), `postBuildEvents` (linhas `start c:` / `start cmd`, com prefixo `(commented) ` quando o GeneXus encenou o comando como comentado), `buildWarnings` (linhas de warning com posição; warnings `pmm00xx` de versão de módulo são adicionalmente promovidos a `warnings` top-level — ver nota abaixo)
+- `stdoutFilteredNoise` — ruído estrutural removido de stdout antes de classificar (ex: linhas `error MSB3491` do `dotnet publish` em `GAM\Platforms\NetCore*` quando rodando sem elevação); quando o único conteúdo bloqueante em stdout for ruído filtrado, o build é classificado como limpo
 - `stderrContent` — linhas reais de stderr após remoção do ruído estrutural do GeneXus 18
 - `stderrFilteredNoise` — ruído estrutural removido de stderr; quando `stderrContent` está vazio e `stderrFilteredNoise` tem conteúdo, o build é limpo e nenhuma recomendação de IDE deve ser emitida
+
+> **Promoção de warnings `pmm00xx` (versão de módulo) a `warnings` top-level:**
+> Warnings GeneXus de família `pmm00xx` (ex.: `pmm0003` "módulo deve ser atualizado para versão N", `pmm0045` "version conflict") sinalizam estado da KB que precisa de atenção do usuário — tipicamente resolvido via `Update Modules` na IDE. Como `buildWarnings` é lista interna que o usuário raramente inspeciona, esses warnings são adicionalmente surfacados em `warnings` (top-level) do diagnóstico, com texto orientativo:
+>
+> - Caso geral: `Alerta de versao de modulo (pmm00xx): <mensagem original>. Resolver via 'Update Modules' na IDE.`
+> - Caso `pmm0045` (inversão de versão — módulo satélite exige versão MAIS NOVA do módulo principal do que a instalada): texto adicional explicando que pode exigir update do GeneXus instalado ou downgrade de módulos da KB; inspecionar via `Update Modules` na IDE.
+>
+> A promoção é **somente para visibilidade** — não muda classificação de status (warnings continuam sendo warnings, não viram erros). O build pode ser `compilou limpo` ou `specify e generate concluídos` mesmo com `pmm00xx` presentes.
 
 ### Observações críticas
 
@@ -511,6 +624,7 @@ Campos relevantes:
 - **`-ConfirmReorg` sem `-AllowReorg`** é bloqueado pelo script (exit 46) — nunca passar um sem o outro.
 - **`-ConfirmReorg`** substitui o `Read-Host` interativo, mas não dispensa a confirmação do usuário humano — obtê-la antes de lançar o processo.
 - **Ler resultado com `Read` tool**, não com `PowerShell(Get-Content ...)` — evita prompt desnecessário.
+- **Lançamento elevado (`Start-Process -Verb RunAs`):** quando o build for disparado com elevação UAC para experimento controlado, **não confiar em `Wait-Process`** sobre o objeto retornado por `Start-Process -PassThru` — esse PID pode ser o broker/launcher do UAC, não o `pwsh` elevado real. `Wait-Process` retorna prematuramente quando o broker termina, deixando o build ainda em execução. Estratégia confiável: **polling do `LogPath` (arquivo final do wrapper)** — esse arquivo só aparece quando o script termina, tanto no caminho de sucesso quanto no de falha (`status: falha operacional`); aguardar a existência **e** a estabilidade do tamanho do arquivo. Cenário válido apenas para experimentos controlados — `-Verb RunAs` não é fluxo regular da skill.
 
 ---
 
@@ -549,6 +663,16 @@ Campos relevantes:
    - apresentar ao usuário o que reorg significa neste contexto
    - exigir confirmação explícita antes de prosseguir
    - só então emitir `FailIfReorg=false` e `DoNotExecuteReorg=false`
+7a. Se o objetivo envolver `-ForceRebuild=true` (em `BuildAll` ou `SpecifyGenerate`):
+    - apresentar ao usuário o que isso significa neste contexto: equivale a
+      `Rebuild All` da IDE, regenera TODOS os objetos da KB independentemente de
+      mudança, pode levar horas e regenerar centenas/milhares de objetos em KB grande
+    - exigir a frase exata `entendo que isto pode regerar a KB inteira e aceito o custo`
+      — não aceitar paráfrases ou confirmações genéricas
+    - só então passar `-AllowWideRebuild` (e `-ConfirmWideRebuild` se em processo
+      desanexado, após obter a frase do usuário humano)
+    - gate independente do gate de reorg: `-AllowReorg` não autoriza `-ForceRebuild=true`,
+      e `-AllowWideRebuild` não autoriza reorg
 8. Executar o script escolhido seguindo a seção **ORQUESTRAÇÃO — PASSO A PASSO EXECUTÁVEL**
    (para `BuildAll`: processo desanexado + Watch em janela visível + `run_in_background`) e capturar:
    - `exitCode`
@@ -561,6 +685,7 @@ Campos relevantes:
    - eventos pós-build: linhas `start c:` ou `start cmd` em stdout → registrar como warning de processos externos disparados
    - stderr não vazio: qualquer conteúdo → registrar como warning; impede `specify e generate concluídos`
    - demais padrões relevantes: `Access denied`, `error MSB`, `: error `, `FAILED`, stack traces de exceção
+   - **carve-out para ruído estrutural GAM/NetCore:** linhas que casam simultaneamente `error MSB3491` + `is denied`/`acesso negado` + caminho contendo `\GeneXus\` e `\Library\GAM\Platforms\` são removidas de stdout antes desta varredura e listadas em `stdoutFilteredNoise`; padrões legítimos de `Access denied` em qualquer outro contexto **permanecem** bloqueantes
    - se encontrados: registrar no diagnóstico e usar `operação concluída, pendente de confirmação funcional` em lugar de `compilou limpo`
    Classificar então o resultado em uma das categorias definidas em EXPECTED INTERFACE
 10. Quando o resultado for `reorg necessária detectada`:
@@ -591,6 +716,10 @@ Campos relevantes:
 - [ ] Quando havia sinal de alteração estrutural, a confirmação com a frase exata foi exigida e obtida antes de executar
 - [ ] `FailIfReorg=true` foi mantido como default em `BuildAll`, salvo instrução explícita
 - [ ] Reorg só foi autorizada após confirmação explícita do usuário
+- [ ] `-ForceRebuild=true` (equivalente a `Rebuild All`) só foi usado mediante pedido
+      explícito do usuário, com aviso do custo apresentado e frase exata
+      `entendo que isto pode regerar a KB inteira e aceito o custo` obtida antes de
+      passar `-AllowWideRebuild`
 - [ ] Quando `reorg necessária detectada`, as três opções foram apresentadas ao usuário
 - [ ] Quando `reorg detectada ou executada` (pós-SpecifyAll), o resultado foi apresentado ao usuário sem ser classificado como sucesso
 - [ ] `Invoke-GeneXusDbImpact.ps1` foi executado antes de `Invoke-GeneXusDbReorg.ps1` quando o objetivo era inspecionar o impacto
@@ -612,9 +741,22 @@ Campos relevantes:
 - NEVER passar `-ConfirmReorg` sem `-AllowReorg` — combinação bloqueada por política (exit 46)
 - NEVER usar `-ConfirmReorg` sem ter obtido confirmação explícita do usuário humano antes
   de lançar o processo — o parâmetro muda o canal de confirmação, não dispensa a confirmação
+- NEVER passar `-ForceRebuild true` sem `-AllowWideRebuild` — combinação bloqueada por
+  política (exit 46) tanto em `Invoke-GeneXusKbBuildAll.ps1` quanto em
+  `Invoke-GeneXusKbSpecifyGenerate.ps1`
+- NEVER passar `-ConfirmWideRebuild` sem `-AllowWideRebuild` — combinação bloqueada por
+  política (exit 46)
+- NEVER passar `-ForceRebuild true` em fluxo pós-import cotidiano nem como "validação
+  completa automática" — `BuildAll` incremental (sem `-ForceRebuild`) é o passo correto
+- NEVER usar `-ConfirmWideRebuild` sem ter obtido a frase exata
+  `entendo que isto pode regerar a KB inteira e aceito o custo` do usuário humano antes
+  de lançar o processo — o parâmetro muda o canal de confirmação, não dispensa a
+  confirmação
+- NEVER aceitar paráfrases ou confirmações genéricas no lugar da frase exata de
+  confirmação de regeneração ampla
 - NEVER depender de `GeneXus Server` como base operacional desta skill
 - NEVER tratar `exitCode = 0` isolado como confirmação funcional
-- NEVER classificar como `compilou limpo` quando stdout ou stderr contiver padrões de erro (`Access denied`, `error MSB`, `: error `, `FAILED`, stack traces), mesmo que exitCode = 0
+- NEVER classificar como `compilou limpo` quando stdout ou stderr contiver padrões de erro (`Access denied`, `error MSB`, `: error `, `FAILED`, stack traces) fora do ruído estrutural GAM/NetCore documentado, mesmo que exitCode = 0
 - NEVER classificar como `specify e generate concluídos` quando stdout contiver padrão `Reorganiza` — o status correto é `reorg detectada ou executada`
 - NEVER tratar stderr não vazio como irrelevante — qualquer conteúdo em stderr deve ser registrado como warning e impede classificação como `specify e generate concluídos`
 - NEVER chamar `Invoke-GeneXusKbSpecifyGenerate.ps1` quando houver sinal de alteração estrutural de atributo no import recente sem a confirmação explícita do usuário com a frase `entendo que haverá reorg e concordo que prossiga`

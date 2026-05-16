@@ -1,79 +1,116 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List
+from datetime import date
+from decimal import Decimal
 
 # --- ZONA ---
 class ZonaBase(BaseModel):
-    zonanombre: str
+    ZonaNombre: str
+
 class ZonaCreate(ZonaBase):
     pass
+
 class ZonaUpdate(BaseModel):
-    zonanombre: Optional[str] = None
+    ZonaNombre: Optional[str] = None
+
 class ZonaRead(ZonaBase):
-    zonacodigo: int
+    ZonaCodigo: int
 
 # --- CATEGORIA ---
 class CategoriaBase(BaseModel):
-    categorianombre: str
+    CategoriaNombre: str
+
 class CategoriaCreate(CategoriaBase):
     pass
+
 class CategoriaUpdate(BaseModel):
-    categorianombre: Optional[str] = None
+    CategoriaNombre: Optional[str] = None
+
 class CategoriaRead(CategoriaBase):
-    categoriacodigo: int
+    CategoriaCodigo: int
 
 # --- CLIENTE ---
 class ClienteBase(BaseModel):
-    clientenombre: str
-    zonacodigo: int
-    categoriacodigo: int
+    ClienteNombre: str
+    ZonaCodigo: int
+    CategoriaCodigo: int
+
 class ClienteCreate(ClienteBase):
     pass
+
 class ClienteUpdate(BaseModel):
-    clientenombre: Optional[str] = None
-    zonacodigo: Optional[int] = None
-    categoriacodigo: Optional[int] = None
+    ClienteNombre: Optional[str] = None
+    ZonaCodigo: Optional[int] = None
+    CategoriaCodigo: Optional[int] = None
+
 class ClienteRead(ClienteBase):
-    clientecodigo: int
+    ClienteCodigo: int
 
 # --- CAJA ---
 class CajaBase(BaseModel):
-    cajadescripcion: str
-    cajasaldoinicial: float
-    cajatotalingresos: float
-    cajatotalegresos: float
-    cajasaldoactual: float
-    cajaestado: str
+    CajaDescripcion: str
+    CajaSaldoInicial: Decimal = Field(default=Decimal("0.00"))
+    CajaTotalIngresos: Decimal = Field(default=Decimal("0.00"))
+    CajaTotalEgresos: Decimal = Field(default=Decimal("0.00"))
+    CajaSaldoActual: Decimal = Field(default=Decimal("0.00"))
+    CajaEstado: str = Field(default="A")
+
+    @validator('CajaEstado')
+    def validate_estado(cls, v):
+        if v not in ('A', 'C', 'X'):
+            raise ValueError("CajaEstado debe ser A, C o X")
+        return v
+
 class CajaCreate(CajaBase):
-    pass
+    CajaId: date
+
 class CajaUpdate(BaseModel):
-    cajadescripcion: Optional[str] = None
-    cajasaldoinicial: Optional[float] = None
-    cajaestado: Optional[str] = None
+    CajaDescripcion: Optional[str] = None
+    CajaSaldoInicial: Optional[Decimal] = None
+    CajaEstado: Optional[str] = None
+
 class CajaRead(CajaBase):
-    cajaid: int
+    CajaId: date
 
 # --- MOVIMIENTO CAJA ---
 class MovimientoCajaBase(BaseModel):
-    cajaid: int
-    movimientocajadescripcion: str
-    movimientocajaimporte: float
-    movimientocajatipo: str
-    movimientocajacomprobante: Optional[str] = None
-    zonaid: Optional[int] = None
+    CajaId: date
+    MovimientoCajaDescripcion: str
+    MovimientoCajaImporte: Decimal
+    MovimientoCajaTipo: str
+    MovimientoCajaComprobante: Optional[str] = None
+    ZonaId: Optional[int] = None
+
+    @validator('MovimientoCajaImporte')
+    def validate_importe(cls, v):
+        if v <= 0:
+            raise ValueError("El importe debe ser mayor a cero")
+        return v
+
+    @validator('MovimientoCajaTipo')
+    def validate_tipo(cls, v):
+        if v not in ('I', 'E'):
+            raise ValueError("MovimientoCajaTipo debe ser I (Ingreso) o E (Egreso)")
+        return v
+
 class MovimientoCajaCreate(MovimientoCajaBase):
     pass
+
 class MovimientoCajaUpdate(BaseModel):
-    movimientocajadescripcion: Optional[str] = None
-    movimientocajaimporte: Optional[float] = None
+    MovimientoCajaDescripcion: Optional[str] = None
+    MovimientoCajaImporte: Optional[Decimal] = None
+
 class MovimientoCajaRead(MovimientoCajaBase):
-    movimientocajaid: int
+    MovimientoCajaId: int
 
 # --- CONCEPTOS CAJA ---
 class ConceptosCajaBase(BaseModel):
-    conceptocajanombre: str
-    zonaid: int
+    ConceptoCajaNombre: str
+    ZonaId: int
+
 class ConceptosCajaCreate(ConceptosCajaBase):
     pass
+
 class ConceptosCajaRead(ConceptosCajaBase):
     pass
 

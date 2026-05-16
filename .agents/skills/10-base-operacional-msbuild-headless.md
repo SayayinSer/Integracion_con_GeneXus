@@ -440,6 +440,16 @@ A flag `/m` habilita build multi-processador. O modelo de arquivo `.msbuild` tem
 
 `/verbosity:minimal` mostra mensagens de task e erros/warnings do MSBuild sem poluir o stdout com estrutura interna de targets. `quiet` suprimiria mensagens de alta importância úteis ao diagnóstico; `normal` adicionaria saída de estrutura de targets sem ganho funcional.
 
+### Gate De Regeneração Ampla (`ForceRebuild=true`)
+
+`BuildAll` via MSBuild com `ForceRebuild=true` **não** é equivalente operacional de `Build All` da IDE: corresponde a `Rebuild All` da IDE — regenera **todos** os objetos da KB independentemente de mudança desde o último build, e em KB grande pode durar horas e regenerar centenas/milhares de objetos (incluindo subtype groups). O mesmo vale para `SpecifyGenerate` com `ForceRebuild=true`.
+
+Por essa assimetria de custo, os wrappers `Invoke-GeneXusKbBuildAll.ps1` e `Invoke-GeneXusKbSpecifyGenerate.ps1` bloqueiam `ForceRebuild=true` por padrão (exit 46). A habilitação exige `-AllowWideRebuild` com confirmação explícita do usuário pela frase exata `entendo que isto pode regerar a KB inteira e aceito o custo` (em modo não-interativo, a confirmação chega via `-ConfirmWideRebuild` após o chamador obter a frase do usuário humano).
+
+Esse gate é **independente** do gate de reorg (`-AllowReorg`): autorizar um não autoriza o outro. Cada operação ampla exige sua própria confirmação por frase exata específica.
+
+O workflow completo, parâmetros e interface estruturada estão documentados na skill `xpz-msbuild-build`; esta seção registra apenas a salvaguarda como parte da realidade operacional MSBuild headless.
+
 ## Restrição De Escopo Sobre GeneXus Server
 
 O público-alvo destas skills de `XPZ` não dispõe de `GeneXus Server`, portanto a skill desta frente não deve assumir `GeneXus Server` como componente disponível nem como trilha operacional pretendida.
@@ -558,6 +568,8 @@ Conclusão operacional desta frente:
 - a exportação headless via `MSBuild` não deve ser tratada como tendo filtro funcional por data de modificação
 - o caminho headless validado para exportação parcial é fornecer explicitamente a lista de objetos em `Objects`/`ObjectList`
 - quando o usuário precisar selecionar objetos por data e não houver lista prévia, a seleção por data permanece dependente da IDE ou de outra fonte externa autorizada que produza a lista de objetos
+
+**Advertência sobre exportação parcial com lista explícita:** mesmo quando `Objects`/`ObjectList` nomeia objetos concretos, o GeneXus pode incluir no `.xpz` **objetos adicionais** (dependências, referências, módulos organizacionais) conforme parâmetros da task (`DependencyType`, `ReferenceType`) e comportamento padrão. **Não** concluir que o pacote coincide com a lista nominal **sem** abrir o artefato e inventariar todo o conteúdo antes de importar. A skill `xpz-msbuild-import-export` documenta checklist de inventário e o anti-padrão “export como casca + patch + import”.
 
 ## Checklist Inicial De Requisitos Da Skill
 

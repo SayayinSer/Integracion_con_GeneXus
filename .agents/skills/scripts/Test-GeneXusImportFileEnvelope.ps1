@@ -113,8 +113,9 @@ if ($null -ne $sourceNode) {
             -Message "'Source/@kb' ausente ou vazio.")) | Out-Null
         $sourceGuidsOk = $false
     } elseif ($kbGuid -notmatch $GuidPattern) {
-        $allFindings.Add((New-Finding -Severity "warn" -Code "source-kb-not-guid" `
+        $allFindings.Add((New-Finding -Severity "fail" -Code "source-kb-not-guid" `
             -Message "'Source/@kb' presente mas nao esta em formato GUID: '$kbGuid'.")) | Out-Null
+        $sourceGuidsOk = $false
     }
 
     if ($null -eq $versionNode) {
@@ -126,8 +127,9 @@ if ($null -ne $sourceNode) {
             -Message "'Source/Version/@guid' ausente ou vazio.")) | Out-Null
         $sourceGuidsOk = $false
     } elseif ($versionGuid -notmatch $GuidPattern) {
-        $allFindings.Add((New-Finding -Severity "warn" -Code "source-version-guid-not-guid" `
+        $allFindings.Add((New-Finding -Severity "fail" -Code "source-version-guid-not-guid" `
             -Message "'Source/Version/@guid' presente mas nao esta em formato GUID: '$versionGuid'.")) | Out-Null
+        $sourceGuidsOk = $false
     }
 
     if ($sourceGuidsOk) {
@@ -173,7 +175,8 @@ if ($null -ne $objectsNode) {
         $result.checks.noEmbeddedXmlDeclaration = $true
     }
 
-    # 5d — GUIDs e placeholder nos elementos de objeto
+    # 5d — GUIDs e placeholders nos elementos de objeto.
+    # Nomes de objetos GeneXus podem conter "PlaceHolder" legitimamente; apenas GUID placeholder bloqueia.
     $result.objectCount = $childElements.Count
     $allGuidsValid  = $true
     $noPlaceholder  = $true
@@ -182,6 +185,12 @@ if ($null -ne $objectsNode) {
         $objGuid = $objNode.GetAttribute("guid")
         $objName = $objNode.GetAttribute("name")
         $nodeTag = $objNode.LocalName
+
+        if ($nodeTag -ne "Object") {
+            $allFindings.Add((New-Finding -Severity "fail" -Code "objects-invalid-child-element" `
+                -Message "'<Objects>' deve conter apenas elementos '<Object>'; encontrado '<$nodeTag>' (name='$objName').")) | Out-Null
+            $allGuidsValid = $false
+        }
 
         if ([string]::IsNullOrEmpty($objGuid)) {
             $allFindings.Add((New-Finding -Severity "fail" -Code "object-guid-missing" `
@@ -199,9 +208,8 @@ if ($null -ne $objectsNode) {
         }
 
         if (-not [string]::IsNullOrEmpty($objName) -and $objName -match $PlaceholderPattern) {
-            $allFindings.Add((New-Finding -Severity "fail" -Code "object-name-placeholder" `
+            $allFindings.Add((New-Finding -Severity "warn" -Code "object-name-placeholder" `
                 -Message "Elemento '<$nodeTag>': name='$objName' parece ser texto de placeholder.")) | Out-Null
-            $noPlaceholder = $false
         }
 
         if ([string]::IsNullOrEmpty($objName)) {

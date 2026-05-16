@@ -36,6 +36,7 @@ export default function RootLayout({
             <a href="/categorias">Categorías</a>
             <a href="/clientes">Clientes</a>
             <a href="/caja">Caja</a>
+            <a href="/conceptos">Conceptos</a>
           </div>
         </nav>
         <main className="container">

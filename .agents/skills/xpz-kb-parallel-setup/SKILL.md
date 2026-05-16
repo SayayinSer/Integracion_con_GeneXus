@@ -235,6 +235,7 @@ Referencia rapida para decidir o peso operacional da ausencia de cada wrapper. A
 | `Test-*KbSetupAudit.ps1` | `KbIntelligence` adotado | `wrappers_atualizados` |
 | `Test-*KbSourceSanity.ps1` | empacotamento local adotado | `auditoria_de_empacotamento_pendente` |
 | `Test-*KbPackageCollision.ps1` | empacotamento local adotado | `auditoria_de_empacotamento_pendente` |
+| `New-*KbImportPackage.ps1` | recomendado quando o empacotamento local for recorrente e a KB precisar de comando curto/allowlist | nenhum estado, enquanto o motor compartilhado puder ser chamado diretamente |
 | `Notify-TaskComplete.ps1` | opcional | nenhum estado |
 
 - A pasta `scripts` deve prever pelo menos dois wrappers locais quando a pasta paralela da KB operar com fluxo oficial de materializacao XML sobre o motor compartilhado:
@@ -264,6 +265,12 @@ Referencia rapida para decidir o peso operacional da ausencia de cada wrapper. A
   - retorna `COLLISION_OK` quando a rodada pretendida ainda nao existe
   - retorna `BLOCK: ...` quando a rodada `nn` ja existir para o mesmo prefixo de frente, com sugestao do proximo `nn` livre
   - deve ser o unico ponto local para decidir se o pacote pode ser gravado ou se a frente deve bloquear por colisao
+- Quando o empacotamento local com `import_file.xml` for recorrente, recomendar wrapper local fino para criacao do pacote, por exemplo `New-*KbImportPackage.ps1`:
+  - recebe `FrontName`, `NN`, opcionalmente `TemplatePackagePath` e opcionalmente `AsJson`
+  - delega para `scripts\New-XpzImportPackage.ps1` da base compartilhada
+  - o wrapper compartilhado chama o motor Python `scripts\New-XpzImportPackage.py`, le `kb-source-metadata.md`, resolve as pastas padrao da pasta paralela, classifica raizes `Object`/`Attribute`, executa gate de colisao e monta o pacote
+  - quando `TemplatePackagePath` for informado, o motor clona `KMW`, `Source`, `Dependencies` e `ObjectsIdentityMapping` de pacote real comparavel; quando omitido, usa envelope minimo derivado de `kb-source-metadata.md` e retorna warning para pacote misto/complexo
+  - este wrapper reduz comando local e facilita allowlist, mas sua ausencia isolada nao bloqueia `wrappers_atualizados` enquanto a KB puder chamar o motor compartilhado diretamente com `-RepoRoot`
 - Quando o fluxo iterativo de import+build produzir o sub-estado `importação real efetiva provada, geração de runtime pendente` ou o usuário reportar que o comportamento ainda não mudou após import e build, a checagem de frescor de runtime pode ser executada diretamente pelo script da base compartilhada `scripts\Test-GeneXusRuntimeFreshness.ps1` — não requer wrapper local:
   - `-KbPath` (obrigatório): caminho da KB GeneXus nativa (onde reside `nav_objs.xml`)
   - `-ObjectName` (obrigatório): nome do objeto GeneXus a verificar
@@ -275,6 +282,7 @@ Referencia rapida para decidir o peso operacional da ausencia de cada wrapper. A
   - Somente leitura: não grava nada, não abre a KB, não invoca MSBuild
 - A ausencia isolada de `Test-*KbSourceSanity.ps1` nao impede, por si so, classificar a pasta como tendo camada minima de wrappers para materializacao oficial ou para `KbIntelligence`; ele passa a ser esperado quando a KB adota fluxo local de geracao e empacotamento que dependa desse gate.
 - A ausencia isolada de `Test-*KbPackageCollision.ps1` tambem nao impede, por si so, classificar a pasta como tendo camada minima de wrappers para materializacao oficial ou para `KbIntelligence`; ele passa a ser esperado quando a KB adota fluxo local de empacotamento com `import_file.xml` local.
+- A ausencia isolada de `New-*KbImportPackage.ps1` nao impede, por si so, classificar a pasta como atualizada; ele e recomendado para empacotamento recorrente e allowlist, mas o motor compartilhado pode ser chamado diretamente quando o agente informar `-RepoRoot`.
 - Um helper local de notificacao pode existir como apoio operacional, mas nao substitui os wrappers principais
 - O wrapper local deve ser fino:
   - resolver caminhos da pasta paralela da KB
@@ -297,6 +305,7 @@ Referencia rapida para decidir o peso operacional da ausencia de cada wrapper. A
   - [Rebuild-KbIntelligenceIndex.example.ps1](examples/Rebuild-KbIntelligenceIndex.example.ps1)
   - [Test-KbSourceSanity.example.ps1](examples/Test-KbSourceSanity.example.ps1)
   - [Test-KbPackageCollision.example.ps1](examples/Test-KbPackageCollision.example.ps1)
+  - [New-KbImportPackage.example.ps1](examples/New-KbImportPackage.example.ps1)
   - [Notify-TaskComplete.example.ps1](examples/Notify-TaskComplete.example.ps1)
   - [Test-KbIndexGate.example.ps1](examples/Test-KbIndexGate.example.ps1)
   - [Get-KbMetadata.example.ps1](examples/Get-KbMetadata.example.ps1)
@@ -389,7 +398,7 @@ No handoff final, usar literalmente um dos estados canonicos listados acima. Nao
 - No fechamento do setup inicial, apresentar `A)` e `B)` como opcoes de proximo passo e informar o tradeoff de tempo entre elas
 - Se a existencia da pasta nativa da KB foi verificada, declarar no fechamento se ela existe/acessou corretamente ou se ficou como ressalva operacional
 - Ao fechar um `modo_atualizacao`, a resposta deve conter obrigatoriamente: classificacao de cada script (EQUIVALENTE / AUSENTE / CUSTOMIZADO), resultado da verificacao de naming de cada diretorio presente em `ObjetosDaKbEmXml` expresso como tabela ou lista estruturada com ao menos tres colunas — `Diretorio`, `Tipo real encontrado`, `Status` (conforme ou divergente) — mesmo que nenhuma divergencia seja encontrada; quando houver divergencia, incluir tambem a coluna `Nome canonico esperado`; estado operacional declarado e resultado do gate quando executado
-- Ao fechar um `modo_atualizacao`, declarar separadamente no handoff: `sync/materializacao`, `indice/gate`, `indice/semantica` e `empacotamento local`; nao colapsar tudo em "tudo certo" sem mostrar a situacao de cada dimensao adotada
+- Ao fechar um `modo_atualizacao`, declarar separadamente no handoff: `sync/materializacao`, `indice/gate`, `indice/semantica`, `empacotamento local` e `importacao_msbuild`; nao colapsar tudo em "tudo certo" sem mostrar a situacao de cada dimensao adotada; `importacao_msbuild` segue as regras de 8.g6 e quando estiver `NAO_ADOTADO` deve aparecer no handoff com esse rotulo explicito — nao omitir a dimensao para simplificar a saida
 - Ao fechar um `modo_atualizacao`, usar literalmente o rotulo `indice/gate` para a dimensao do gate estrutural e de frescor; nao substituir por variantes como `indice/frescor`, `frescor`, `indice` isolado ou equivalentes
 - No handoff final, capturar o timestamp real imediatamente antes de responder e usá-lo na propria resposta; nao usar placeholder, horario inventado, valor reaproveitado de mensagem anterior nem timestamp inferido do contexto
 - Se a pasta tiver `PacotesGeradosParaImportacaoNaKbNoGenexus`, a resposta final de `modo_atualizacao` deve dizer explicitamente se o fluxo de empacotamento local foi classificado como `OK`, `NAO_ADOTADO` ou `PENDENTE`
@@ -424,10 +433,11 @@ No handoff final, usar literalmente um dos estados canonicos listados acima. Nao
     - Arquivos de configuracao a verificar (somente se existirem):
       - Claude Code: `Join-Path $env:USERPROFILE '.claude\CLAUDE.md'`
       - Codex: `Join-Path $env:USERPROFILE '.codex\AGENTS.md'`
-      - OpenCode: `Join-Path $env:USERPROFILE '.config\opencode\opencode.json'` → ler campo `instructions[]` e verificar cada arquivo listado
+      - Cursor: `Join-Path $env:USERPROFILE '.cursor\rules'` → verificar regras globais `.mdc`; se existir `Join-Path $env:USERPROFILE '.cursor\AGENTS.md'`, verificar também como alternativa simples
+      - OpenCode: `Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md'`; se existir `Join-Path $env:USERPROFILE '.config\opencode\opencode.json'` ou `.jsonc`, ler campo `instructions[]` e verificar cada arquivo listado
     - Para cada arquivo encontrado, aplicar verificacao em dois niveis:
       - Nivel 1: o proprio arquivo contem `## Pasta paralela de KB GeneXus`? Se sim → coberto, nenhuma acao
-      - Nivel 2: o arquivo referencia outro arquivo de instrucoes (ex: linha `@~/.codex/AGENTS.md` no `CLAUDE.md`, ou campo `instructions` no `opencode.json`)? Se sim → seguir a referencia e verificar o arquivo apontado; se esse contiver a secao → coberto, nenhuma acao
+      - Nivel 2: o arquivo referencia outro arquivo de instrucoes (ex: linha `@~/.codex/AGENTS.md` no `CLAUDE.md`/arquivo `.mdc`, ou campo `instructions` no `opencode.json`)? Se sim → seguir a referencia e verificar o arquivo apontado; se esse contiver a secao → coberto, nenhuma acao
     - Propor adicao apenas quando nem o arquivo direto nem os arquivos referenciados contiverem a secao
     - A adicao deve ir no arquivo centralizado ja referenciado quando houver um; caso contrario, no proprio arquivo de configuracao da ferramenta
     - Apresentar ao usuario qual arquivo sera alterado e o bloco exato a adicionar; aguardar aprovacao explicita antes de gravar:
@@ -572,6 +582,7 @@ Pre-condicao obrigatoria: confirmar que o passo 7b foi executado nesta sessao an
       - existencia da pasta `PacotesGeradosParaImportacaoNaKbNoGenexus`
       - existencia de wrapper local `Test-*KbSourceSanity.ps1`
       - existencia de wrapper local `Test-*KbPackageCollision.ps1`
+      - existencia de wrapper local `New-*KbImportPackage.ps1`
       - documentacao local (`AGENTS.md`, `README.md`) mencionando `import_file.xml`, pacote local ou importacao manual na IDE
 
 8.g3.ii Se nao houver nenhuma dessas evidencias, declarar `empacotamento local = NAO_ADOTADO` e seguir
@@ -579,13 +590,14 @@ Pre-condicao obrigatoria: confirmar que o passo 7b foi executado nesta sessao an
 8.g3.iii Se houver evidencia objetiva, auditar explicitamente os wrappers locais ligados a empacotamento:
     - `Test-*KbSourceSanity.ps1`
     - `Test-*KbPackageCollision.ps1`
+    - `New-*KbImportPackage.ps1`, quando existir ou quando a KB declarar que precisa de comando curto/allowlist para empacotamento recorrente
     Para cada um, classificar como `EQUIVALENTE`, `AUSENTE` ou `CUSTOMIZADO` sob o mesmo criterio de 8.a.ii
 
 8.g3.iv Se a pasta adota ou pode adotar empacotamento local e `Test-*KbPackageCollision.ps1` estiver `AUSENTE` ou `CUSTOMIZADO`, nao concluir `wrappers_atualizados` como estado global suficiente; declarar `empacotamento local = PENDENTE` e usar estado operacional compativel com essa pendencia, preferindo `auditoria_de_empacotamento_pendente` quando `sync`, indice e estrutura estiverem OK
 
-8.g3.v Se a pasta adota ou pode adotar empacotamento local e os wrappers `Test-*KbSourceSanity.ps1` e `Test-*KbPackageCollision.ps1` estiverem `EQUIVALENTE` ou conscientemente `NAO_ADOTADO` por regra local explicitada ao usuario, declarar `empacotamento local = OK`
+8.g3.v Se a pasta adota ou pode adotar empacotamento local e os wrappers `Test-*KbSourceSanity.ps1` e `Test-*KbPackageCollision.ps1` estiverem `EQUIVALENTE` ou conscientemente `NAO_ADOTADO` por regra local explicitada ao usuario, declarar `empacotamento local = OK`; `New-*KbImportPackage.ps1` ausente nao bloqueia esse estado enquanto o motor compartilhado puder ser chamado diretamente com `-RepoRoot`
 
-8.g3.vi No handoff final de `modo_atualizacao`, quando 8.g3 foi executado, listar separadamente a classificacao de `Test-*KbSourceSanity.ps1` e `Test-*KbPackageCollision.ps1`; nao substituir esse detalhe por resumo agregado como "9 scripts presentes", "scripts parseados" ou equivalente
+8.g3.vi No handoff final de `modo_atualizacao`, quando 8.g3 foi executado, listar separadamente a classificacao de `Test-*KbSourceSanity.ps1`, `Test-*KbPackageCollision.ps1` e, se aplicavel, `New-*KbImportPackage.ps1`; nao substituir esse detalhe por resumo agregado como "9 scripts presentes", "scripts parseados" ou equivalente
 
 8.g3.vii Criterio de parada curta por pendencia isolada de empacotamento:
     - Se `Test-*KbStructure.ps1` retornou `STRUCTURE_OK`, `Test-*KbIndexGate.ps1` retornou `GATE_OK`, a verificacao de naming ja fechou sem divergencia e a unica lacuna objetiva remanescente do fluxo de empacotamento local for `Test-*KbPackageCollision.ps1 = AUSENTE`, autorizar fechamento curto do diagnostico
@@ -609,6 +621,24 @@ Pre-condicao obrigatoria: confirmar que o passo 7b foi executado nesta sessao an
     - Aguardar aprovacao explicita do usuario antes de alterar o `AGENTS.md`
     - Se a regra de nexa ja estiver explicitamente restrita a modelagem/analise de objetos e excluir tarefas `xpz-*`, declarar conforme sem propor alteracao
     - Esta verificacao aplica-se a qualquer pasta paralela com referencia a nexa no `AGENTS.md` local, independentemente de usar `KbIntelligence`
+
+8.g6 Auditoria de adocao do fluxo de importacao via MSBuild (executar antes de 8.h):
+
+8.g6.i Determinar se ha evidencia objetiva de uso do fluxo de importacao via MSBuild — `Invoke-GeneXusXpzImport.ps1` da skill `xpz-msbuild-import-export` — pela pasta paralela:
+    - considerar como evidencia suficiente qualquer uma das seguintes:
+      - existencia de `Temp\import.json`, `Temp\msbuild.stdout.log` ou outros artefatos nominais de execucao de `Invoke-GeneXusXpzImport.ps1`
+      - existencia de wrapper local que delegue a `Invoke-GeneXusXpzImport.ps1` (ex: `Invoke-*KbXpzImport.ps1`)
+      - documentacao local (`AGENTS.md`, `README.md`) mencionando importacao headless, MSBuild import ou a skill `xpz-msbuild-import-export` no fluxo operacional
+      - `PacotesGeradosParaImportacaoNaKbNoGenexus` populado E referencia documental local ao caminho de importacao headless (a mera existencia da pasta nao basta — empacotamento sem importacao headless e cenario valido coberto por 8.g3)
+
+8.g6.ii Se nao houver nenhuma dessas evidencias, declarar `importacao_msbuild = NAO_ADOTADO` e seguir
+
+8.g6.iii Se houver evidencia objetiva, esta skill nao audita o conteudo nem o comportamento de `Invoke-GeneXusXpzImport.ps1`. Esse script e do motor compartilhado e seu contrato (parametros, diagnostico JSON, resiliencia do pos-processamento, sub-estados de classificacao) e governado pela skill `xpz-msbuild-import-export`. A acao desta skill e:
+    - declarar `importacao_msbuild = ADOTADO` no handoff e roteamento explicito para `xpz-msbuild-import-export` quando houver qualquer suspeita de diagnostico degradado (ex: `import.json` ausente, vazio, com `postProcessingFailed=true`, ou ausencia de `importedItems` apesar de `__IMPORTED_ITEM__` no log bruto)
+    - nao tentar corrigir o script localmente nem reinterpretar sub-estados de import dentro deste fluxo de setup
+    - nao confundir falha de pos-processamento do wrapper com falha de import: `__IMPORTED_ITEM__` no log bruto e evidencia de import real, mesmo quando o `import.json` estiver degradado — a classificacao final do sub-estado pertence a `xpz-msbuild-import-export`
+
+8.g6.iv No handoff final de `modo_atualizacao`, quando 8.g6 foi executado, listar separadamente a dimensao `importacao_msbuild` com um dos rotulos: `ADOTADO`, `NAO_ADOTADO` ou `PENDENTE_DIAGNOSTICO` (este ultimo quando houver evidencia de diagnostico degradado que o usuario deve resolver via `xpz-msbuild-import-export` antes de declarar a dimensao como `ADOTADO`); nao colapsar essa dimensao em `empacotamento local`, `sync/materializacao` ou outra dimensao adjacente — sao camadas distintas
 
 8.h Ao concluir o bloco de atualizacao, declarar o estado operacional compativel com a evidencia realmente fechada e apresentar a tabela de scripts com as colunas: Script | Classe (EQUIVALENTE / AUSENTE / CUSTOMIZADO) | Acao. A tabela deve incluir TODOS os scripts esperados — nao apenas os que requerem acao; scripts EQUIVALENTE tambem devem ter uma linha na tabela. Uma lista de "scripts a atualizar", "scripts a criar" ou "pontos de atencao" NAO substitui a tabela de classificacao — sao formatos diferentes; a tabela de classificacao e obrigatoria independentemente de qualquer resumo adicional. Scripts presentes em `INVENTORY_SHORT_NAMING` devem aparecer na tabela como CUSTOMIZADO com acao de renome — nao como EQUIVALENTE e nao omitidos. Parse ja esta coberto pelo gate: `GATE_OK` prova que todos os scripts passaram o parser do PowerShell sem erros — nao e necessario repetir o resultado de parse na tabela; a classificacao EQUIVALENTE / AUSENTE / CUSTOMIZADO de cada script e obrigatoria mesmo assim e nao e substituida pelo gate. Listar explicitamente: scripts adicionados, scripts mantidos (EQUIVALENTES), scripts substituidos com aprovacao e scripts pulados. Quando houver `PacotesGeradosParaImportacaoNaKbNoGenexus`, a tabela ou o resumo deve incluir explicitamente `Test-*KbSourceSanity.ps1` e `Test-*KbPackageCollision.ps1`, mesmo que a conclusao seja "mantido" ou "ausente". Quando 8.g3.vii se aplicar, a saida pode ser curta e objetiva, sem reinspecao exaustiva dos wrappers ja estabilizados; ainda assim, deve preservar a classificacao explicita dos wrappers de empacotamento local e o estado canonico final. Atualizar o campo de estado operacional no `AGENTS.md` local da pasta paralela para refletir o que realmente foi concluido (ex: `wrappers_atualizados`, `auditoria_de_empacotamento_pendente`, `bootstrap_incompleto`). Nao manter declaracao de estado anterior desatualizada — se o `AGENTS.md` dizia `materializado_e_indice_validado` mas o gate script nao existia e acabou de ser criado, o estado deve ser atualizado para `wrappers_atualizados`. Um `AGENTS.md` com estado desatualizado serve como argumento falso para agentes burlarem o gate. Verificar tambem se a secao `## Wrappers locais` do `AGENTS.md` local lista todos os scripts atualmente presentes em `scripts/` com nomes e funcoes corretos; se estiver desatualizada — por listar scripts com nomes antigos ou omitir scripts recem-adicionados — propor atualizacao ao usuario antes de declarar o setup como concluido. Por fim, comparar a estrutura geral do `AGENTS.md` local contra o modelo canonico em `examples/AGENTS.md.example` desta skill; se houver secoes canonicas ausentes alem das ja verificadas nos passos anteriores (`## Triagem Por Indice` em 8.g e `## Wrappers locais` acima), propor adicao ao usuario antes de declarar o setup como concluido.
     - Quando `README.md` local tambem declarar estado operacional humano, timestamps de materializacao/indice ou observacao de frescor, comparar esses campos com `AGENTS.md`, `kb-source-metadata.md` e `-Query index-metadata`
@@ -666,8 +696,9 @@ Quando acionado de forma isolada, seguir os mesmos passos de 8.g2.i a 8.g2.vii. 
    - `Get-*KbMetadata.ps1`, se a KB local adotar `KbIntelligence`
    - `Test-*KbMetadataWrapper.ps1`, se a KB local adotar `KbIntelligence`
    - `Test-*KbStructure.ps1`, se a KB local adotar `KbIntelligence`
+   - `New-*KbImportPackage.ps1`, recomendado se a KB local adotar empacotamento recorrente e precisar de comando curto/allowlist
    - helper local opcional de notificacao, se houver necessidade operacional
-20. Se os scripts `Test-*KbIndexGate.ps1`, `Get-*KbMetadata.ps1`, `Test-*KbMetadataWrapper.ps1` e `Test-*KbStructure.ps1` forem criados ou confirmados durante o setup ou atualizacao, registrar os padroes de allowlist correspondentes em `.claude\settings.json` da pasta paralela da KB:
+20. Se os scripts `Test-*KbIndexGate.ps1`, `Get-*KbMetadata.ps1`, `Test-*KbMetadataWrapper.ps1`, `Test-*KbStructure.ps1` e, quando adotado, `New-*KbImportPackage.ps1` forem criados ou confirmados durante o setup ou atualizacao, registrar os padroes de allowlist correspondentes em `.claude\settings.json` da pasta paralela da KB:
    - Para cada script, adicionar uma entrada no array `permissions.allow` no formato `PowerShell(& "<caminho-absoluto-do-script>" *)`
    - Usar o nome real do script no caminho (ex: `Test-FabricaBrasilKbIndexGate.ps1`), nao o nome sanitizado do exemplo
    - Se `.claude\settings.json` ainda nao existir, criar com estrutura minima
@@ -683,6 +714,10 @@ Quando acionado de forma isolada, seguir os mesmos passos de 8.g2.i a 8.g2.vii. 
    - no minimo, confirmar parse do `.ps1`, existencia do engine compartilhado apontado por ele e ausencia de placeholders sanitizados em configuracao efetiva
    - quando houver XML local seguro para teste, preferir uma execucao consultiva controlada do proprio wrapper
    - nao usar `STRUCTURE_OK` ou `GATE_OK` como evidencia suficiente desse wrapper, porque o checklist estrutural canonico nao o trata como item minimo universal
+27a. Se `New-*KbImportPackage.ps1` for criado ou atualizado nesta frente, validar esse wrapper diretamente antes do fechamento:
+   - no minimo, confirmar parse do `.ps1`, existencia do engine compartilhado apontado por ele e ausencia de placeholders sanitizados em configuracao efetiva
+   - quando houver frente local segura para teste, preferir execucao controlada com `-AsJson`; se nao houver frente segura, declarar a validacao limitada a parse/caminho
+   - nao criar pacote real apenas para validar o wrapper sem autorizacao explicita do usuario
 28. Se a estrutura de pastas e documentos estiver pronta, mas a camada minima de wrappers locais ainda nao existir ou ainda mantiver placeholders sanitizados em configuracao efetiva, reportar isso como `estrutura parcial` ou `bootstrap incompleto`, nao como setup concluido
 29. Ao concluir o setup inicial, deixar explicito que a estrutura esta pronta, mas `ObjetosDaKbEmXml` ainda nao foi materializada
 30. Se a primeira materializacao oficial ocorrer depois do setup, atualizar ou neutralizar a memoria local provisoria criada no setup que ainda afirme `ObjetosDaKbEmXml` nao materializada, `aguardando primeiro XPZ` ou equivalente

@@ -26,6 +26,22 @@ export default function Home() {
             Gestionar Categorías
           </Link>
         </div>
+
+        <div className="card">
+          <h3>Clientes</h3>
+          <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Gestión integral de la cartera de clientes.</p>
+          <Link href="/clientes" className="btn-primary" style={{ display: 'inline-block' }}>
+            Gestionar Clientes
+          </Link>
+        </div>
+
+        <div className="card">
+          <h3>Caja</h3>
+          <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Control de ingresos, egresos y saldos.</p>
+          <Link href="/caja" className="btn-primary" style={{ display: 'inline-block' }}>
+            Ir a Caja
+          </Link>
+        </div>
       </div>
 
       <section className="glass" style={{ padding: '2rem', borderRadius: 'var(--radius)', marginTop: '2rem' }}>

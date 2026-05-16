@@ -1,11 +1,117 @@
 # Ideias Pendentes
 
+## Gate `lastUpdate` futuro em `Test-GeneXusImportFileEnvelope.ps1`
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** conversa operacional 2026-05-13; plano normativo consolidado em `07-open-points-e-checklist.md` (secao *Plano operacional: lastUpdate, aviso de KB no futuro e diagnostico de import MSBuild*).
+
+### Objetivo
+
+Estender o gate estatico `scripts/Test-GeneXusImportFileEnvelope.ps1` (hoje: envelope, GUIDs, placeholders, etc.) para validar **metadado temporal** nos `<Object>` embutidos, alinhado ao acordo:
+
+- objetos **modificados** na rodada: `lastUpdate` (UTC) nao pode ultrapassar `UtcNow` do host além de margem pequena em segundos;
+- objetos **preservados** (mesmo `lastUpdate` que o XML oficial no acervo): nao aplicar bloqueio duro por futuro.
+
+### Design em aberto
+
+O script, so com o ficheiro do pacote, **nao infere** modificado vs preservado. Entradas possiveis (uma ou combinadas):
+
+- caminho opcional para raiz de snapshot oficial (`ObjetosDaKbEmXml` ou equivalente): para cada `Object/@guid`, se existir ficheiro oficial e o atributo `lastUpdate` coincidir com o do pacote → tratar como preservado;
+- lista opcional de GUIDs (ou pares tipo:nome) declarados como modificados nesta rodada pelo empacotador;
+- saida JSON: novos `checks` / `warnings` / `blockingReasons` com codigos estaveis (ex.: `last-update-future-modified-object`).
+
+### Nota de fluxo
+
+Import direto de `.xpz` pode nao passar por este script; o mesmo criterio pode exigir extracao do XML interior para temp + chamada ao gate, ou wrapper dedicado no caminho MSBuild.
+
+---
+
 Cada entrada usa dois campos curtos logo abaixo do titulo:
 
 - **Importância** — quanto dói se a ideia nunca for implementada. Valores: `baixa` (útil mas dispensável), `média` (gap real com workaround manual), `alta` (risco de dano efetivo, como contaminação de KB, perda de trabalho ou falso negativo crítico).
 - **Maturidade** — quão pronta a ideia está para virar frente de implementação. Valores: `ideia` (direção identificada, decisões de design em aberto), `pesquisa feita` (direção técnica resolvida, falta gatilho de caso real), `pronta para implementar` (caso concreto identificado, decisões fechadas, falta executar).
 
 Entradas legadas sem avaliação carregam `FALTA AVALIAR` em ambos os campos até que sejam revistas em sessão dedicada.
+
+## Corrigir pos-processamento resiliente em `Invoke-GeneXusXpzImport.ps1`
+
+**Importância:** alta
+**Maturidade:** pronta para implementar
+
+**Origem:** import real em 2026-05-14 na KB FabricaBrasil18; evidência detalhada em `historico/base-geral/2026-05-14-import-wrapper-join-cssproperties.md`.
+
+### Problema concreto que motiva a ideia
+
+Durante import real bem-sucedido, o MSBuild registrou `Import Task Sucesso` e os 3
+marcadores `__IMPORTED_ITEM__=...`, mas o wrapper caiu depois disso com:
+
+```text
+Exception calling "Join" with "2" argument(s): "Value cannot be null. (Parameter 'values')"
+```
+
+A causa mecanica esta na linha 728 de `scripts/Invoke-GeneXusXpzImport.ps1`: quando
+`msbuild.stderr.log` vem vazio, o pipeline usado para montar `$stdErrNoise` produz
+`$null`, e `[string]::Join(...)` dispara `ArgumentNullException`.
+
+### Impacto
+
+O import ja tinha ocorrido, mas o `catch` global emitiu `exitCode=90`, classificou como
+`falha operacional`, perdeu `importedItems` e nao propagou os caminhos dos artefatos
+`msbuild.stdout.log`, `msbuild.stderr.log` e `import-real.msbuild`.
+
+Isso fere o contrato operacional da skill `xpz-msbuild-import-export`: falha interna
+no pos-processamento nao deve apagar a evidência ja coletada do MSBuild.
+
+### Direcao de implementacao
+
+- Hotfix minimo: forcar array em `$stdErrNoise`, usando `@(...)` antes de chamar
+  `[string]::Join(...)`.
+- Correcao robusta: envolver o bloco de pos-processamento pos-MSBuild em `try/catch`
+  interno e emitir diagnostico parcial com `postProcessingFailed=true`.
+- Preservar no diagnostico parcial: exit code real do MSBuild, caminhos de artefatos,
+  stdout/stderr bruto e `importedItems` extraidos do stdout quando existirem.
+
+### Criterio de aceite
+
+Uma importacao com `msbuild.stderr.log` vazio e stdout contendo `Import Task Sucesso`
+nao pode terminar como falha operacional opaca por erro de pos-processamento. Se o
+pos-processamento falhar, o JSON deve preservar as evidencias do MSBuild e indicar a
+falha secundaria de forma explicita.
+
+## Documentar aviso GeneXus de acesso negado a `CssProperties.json` durante import
+
+**Importância:** baixa
+**Maturidade:** pesquisa feita
+
+**Origem:** import real em 2026-05-14 na KB FabricaBrasil18; evidência detalhada em `historico/base-geral/2026-05-14-import-wrapper-join-cssproperties.md`.
+
+### Problema concreto que motiva a ideia
+
+Durante a importacao de `procCrudMsprod`, o stdout registrou:
+
+```text
+O acesso ao caminho 'C:\Program Files (x86)\GeneXus\GeneXus18\CssProperties.json' foi negado.
+```
+
+A mensagem apareceu entre `Importando Procedure 'procCrudMsprod' ...` e `Bem sucedido`.
+O `stderr` estava vazio e a task terminou com `Import Task Sucesso`.
+
+### Leitura operacional atual
+
+O arquivo `CssProperties.json` existe e nao tem atributo read-only, mas fica dentro de
+`C:\Program Files (x86)`, protegido por ACL/UAC para processos sem elevacao. A evidencia
+aponta para ruido informativo de ambiente GeneXus, nao para falha do pacote ou do import.
+
+### Direcao futura
+
+Registrar na documentacao operacional da skill `xpz-msbuild-import-export` que essa
+mensagem, quando vier apenas em stdout e cercada por `Bem sucedido`, nao deve ser
+classificada como falha de importacao.
+
+Nao elevar GeneXus/MSBuild automaticamente por causa dessa linha. Reclassificar apenas
+se houver caso em que a mensagem venha acompanhada de falha real de import ou build.
 
 ## LlamaIndex / LangChain + vector store como alternativa ao indice SQLite atual
 
@@ -1110,6 +1216,46 @@ Camada de julgamento (regra textual em `xpz-builder`): consolidar os resultados 
 
 Implementar quando houver: (a) pelo menos um gate upstream (1.1 mojibake, 1.2 dependências ou 1.3 drift de tipagem) implementado e em uso real, gerando saída estruturada que sirva de conteúdo para uma das seções do manifesto; e (b) decisão editorial fechada sobre formato, posição, nomenclatura e política de versionamento Git.
 
+## Script de inventário de objetos em pacote importável (`import_file.xml` / `.xpz`)
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** incidente operacional documentado em 2026-05-13 (export MSBuild com `-ObjectList` gerou `.xpz` com dependências e módulo de plataforma; import headless sem inventário completo do conteúdo real do pacote). A camada comportamental já foi incorporada em `xpz-msbuild-import-export`, `xpz-builder`, `10-base-operacional-msbuild-headless.md` e `08-guia-para-agente-gpt.md`; esta entrada cobre apenas **automação determinística** opcional.
+
+**Filiação editorial:** complementa o **Manifesto semântico de pacote** (intenção e narrativa na fase de empacotamento em `xpz-builder`). O inventário por script foca no **conteúdo efetivo** do artefato logo antes do import MSBuild — especialmente quando o pacote veio de export, reempacotamento manual ou patch, onde o manifesto da frente de empacotamento pode não existir ou não bater com o zip.
+
+### Problema concreto que motiva a ideia
+
+O gate `Test-GeneXusImportFileEnvelope.ps1` valida envelope (`ExportFile`, `KMW`, `Source`, GUIDs, etc.), mas **não** substitui a lista explícita de **todos** os objetos que seriam aplicados à KB. Hoje essa lista é obrigação **manual** do agente (ler `<Objects>`, expandir `.xpz` se necessário, confrontar com o delta declarado). Agentes que saltam o passo ou assumem “lista nominal do export = conteúdo do pacote” reintroduzem risco de importar extras (módulos de sistema, SDTs não alterados, dependências não pedidas) e de custo operacional alto (ex.: rebuild amplo), mesmo sem corrupção estrutural da KB.
+
+### Direção técnica proposta
+
+Script no motor compartilhado `scripts/` (nome provisório `Get-GeneXusImportPackageObjectInventory.ps1` ou extensão opcional de `Test-GeneXusImportFileEnvelope.ps1` com modo `-ListObjectsOnly` / `-AsJson`):
+
+- **Entrada:** caminho para `import_file.xml` **ou** `.xpz` (tratar como ZIP, localizar `ExportFile`/XML interno com o mesmo esquema).
+- **Saída estruturada (JSON):** lista de objetos com `type`, `name`, `guid` quando disponível; contagem total; flags heurísticas opcionais (ex.: candidato a módulo de plataforma pelo par `Module` + nome conhecido como `GeneXus`).
+- **Modo opcional de confronto:** parâmetro com caminho para ficheiro de “delta declarado” (lista `Tipo:Nome` ou JSON) — emitir `MATCH` / `EXTRA_OBJECTS` / `MISSING_FROM_PACKAGE` com código de saída não zero nos casos bloqueantes acordados com o utilizador.
+- **Ordem na trilha:** após `Test-GeneXusImportFileEnvelope.ps1` com sucesso, **antes** de `Invoke-GeneXusXpzImport.ps1` (ou equivalente local).
+
+Integração futura em wrappers locais da pasta paralela: um único comando que encadeia envelope + inventário + import, com falha cedo quando houver extras não justificados.
+
+### Decisões em aberto
+
+- Fundir com o gate de envelope num único script (duas fases internas) ou manter scripts separados para responsabilidade única e reutilização?
+- Contrato exato do ficheiro “delta declarado” (texto linha a linha vs JSON) e se o confronto é sempre obrigatório ou só com `-StrictDeltaPath`.
+- Lista de nomes/GUIDs de módulos de plataforma: configurável por `.json` na pasta paralela vs hardcoded mínimo + expansão documental.
+- `.xpz` com estrutura interna não padronizada na amostra — validar contra exports reais GeneXus 18 já usados na trilha.
+
+### Limiar para implementar
+
+Implementar quando houver: (a) segunda ocorrência documentada de import headless com escopo “cirúrgico” que tenha levado extras não intencionais **apesar** da documentação nova; ou (b) pasta paralela que queira enforced chain no `.ps1` (sem depender só de disciplina do agente); ou (c) frente que precise de evidência em CI/revisão humana listando objetos do pacote automaticamente.
+
+### Relação com outras entradas em 999
+
+- **Manifesto semântico de pacote:** o manifesto captura intenção na **saída** de `xpz-builder`; o inventário por script valida **fato** no artefato imediatamente antes do import quando a origem do pacote não é só essa saída.
+- **Gate de dependências GeneXus no empacotamento de delta:** aquele gate age **antes** de gravar o pacote; este inventário age **depois**, como última linha de defesa contra pacotes vindos de export IDE/MSBuild ou edição manual.
+
 ## Expansão do índice SQLite para fingerprint de call site
 
 **Importância:** média
@@ -1228,3 +1374,117 @@ Qualquer palavra cujo acento muda o sentido — `e/é`, `esta/está`, `tem/têm`
 ### Limiar para implementar
 
 **Pronto agora.** Não há gate técnico, não há pesquisa pendente, não há decisão de design em aberto. Falta apenas alocar sessão dedicada com escopo declarado.
+
+## Detecção robusta de eventos pós-build por marcador de fase
+
+**Importância:** baixa
+**Maturidade:** ideia
+
+**Origem:** levantado em 2026-05-12 como evolução natural do tratamento de eventos pós-build introduzido na frente de filtro de ruído GAM/NetCore.
+
+### Problema concreto que motiva a ideia
+
+Hoje a detecção de eventos pós-build em `Invoke-GeneXusKbBuildAll.ps1` e `Invoke-GeneXusKbSpecifyGenerate.ps1` usa regex direta nas linhas de comando observadas:
+
+```regex
+^\s*(REM\s+)?(start\s+c:|start\s+cmd)[^\r\n]*
+```
+
+Essa abordagem cobre os formatos vistos até agora (`start c:`, `start cmd /c`, com ou sem prefixo `REM`), mas é uma lista enumerada de literais. Cada novo formato observado (ex.: `call`, `cmd /k`, `powershell`, comando direto sem `start`) exigirá nova rodada de coleta empírica e novo literal na regex.
+
+O GeneXus já emite um marcador estável de início da fase pós-build no stdout: `========== ... iniciado ==========` (com nome da fase) e `Executando eventos pós-construção ...`. Esse marcador delimita uma janela bem definida onde qualquer linha posterior, até o próximo `==========` de fim de fase, é candidata a evento pós-build.
+
+### Ideia de melhoria
+
+Substituir a regex enumerativa por uma detecção baseada em janela delimitada por marcador de fase:
+
+1. Localizar no stdout o marcador `Executando eventos pós-construção ...` (ou marcador equivalente que apareça nas próximas evidências)
+2. Capturar todas as linhas a partir desse marcador até o próximo `==========` de fim de fase ou marcador equivalente de conclusão
+3. Classificar as linhas dessa janela como `postBuildEvents`, preservando ordem e prefixos (incluindo `REM`)
+4. Aplicar heurística adicional para distinguir "linha que é comando real" de "linha que é diagnóstico/marcador" — provavelmente excluindo linhas com `==========`, mensagens de erro do MSBuild com formato `path(N,M): error :`, etc.
+
+### Benefícios
+
+- Cobertura completa de formatos de comando pós-build (atuais e futuros)
+- Robustez a variações de configuração da KB que ainda não vimos
+- Captura ordem original dos eventos, útil quando há cadeia
+- Elimina necessidade de manutenção contínua da lista enumerativa
+
+### Perguntas a responder antes de decidir
+
+- O marcador `Executando eventos pós-construção ...` aparece **sempre** que há eventos pós-build, independentemente do environment, generator e versão do GeneXus? (Suspeita forte: sim — é mensagem padrão da fase, mas precisa confirmação empírica em pelo menos 3 environments distintos.)
+- O fechamento da janela é confiável pelo próximo `==========` ou existe formato alternativo (ex.: silêncio de N linhas)?
+- A heurística de exclusão de linhas de erro/diagnóstico do MSBuild dentro da janela deve seguir os mesmos padrões já usados pelo classificador principal, ou requer lista própria?
+- Vale fazer a transição em uma frente única, ou faz mais sentido manter regex literal como fallback enquanto a detecção por janela é validada empiricamente em paralelo?
+
+## Avaliar gate similar a `-AllowWideRebuild` para `CompileMains=true` e `DetailedNavigation=true`
+
+**Importância:** baixa
+**Maturidade:** ideia
+
+**Origem:** levantado em 2026-05-13 durante a frente que introduziu o gate de
+`-ForceRebuild=true` (= `Rebuild All` da IDE) em `Invoke-GeneXusKbBuildAll.ps1` e
+`Invoke-GeneXusKbSpecifyGenerate.ps1`. O outro agente que motivou a frente listou
+`CompileMains=true` e `DetailedNavigation=true` como candidatos a gate análogo, com
+o argumento de que também são "operações amplas em KB grande". Decisão de design
+naquela frente: postergar até haver evidência empírica do custo real dessas flags.
+
+### Problema concreto que motiva a ideia
+
+`CompileMains=true` faz o `BuildAll` compilar todos os objetos Main da KB além do
+Developer Menu. `DetailedNavigation=true` faz o GeneXus executar análise de navegação
+detalhada durante a especificação. Conceitualmente ambas podem amplificar o custo de
+um `BuildAll` cotidiano. Mas o impacto prático em KB grande não foi medido empiricamente
+nesta base — e o caso operacional que motivou a frente original (`FabricaBrasil18` com
+horas de regeneração) foi causado por `ForceRebuild=true`, não por `CompileMains` nem
+por `DetailedNavigation`.
+
+Sem evidência empírica, não dá para calibrar:
+
+- se as duas merecem o mesmo tratamento (gate por frase exata),
+- se merecem tratamento mais leve (warning + confirmação `sim/não`),
+- ou se o ganho de proteção não compensa o atrito adicional no fluxo de quem usa
+  `CompileMains=true` deliberadamente.
+
+### Direção técnica proposta
+
+Antes de gravar gates, fazer experimento controlado:
+
+1. Em KB grande conhecida (ex.: a mesma KB do caso do `Rebuild All` original, ou
+   `KB_Teste_Grande_A` já documentada em `10-base-operacional-msbuild-headless.md`),
+   medir o tempo e o tamanho de objetos tocados em quatro execuções de `BuildAll`
+   incremental (sem `ForceRebuild`), variando:
+   - baseline: nenhuma flag adicional
+   - `CompileMains=true`
+   - `DetailedNavigation=true`
+   - ambas
+2. Comparar `timing.msbuildDurationSeconds`, número de fases internas em
+   `timing.phases`, presença de `Rebuild All` no stdout e tamanho dos artefatos
+   gerados.
+3. Se uma das flags multiplicar o custo de forma comparável a `ForceRebuild=true`
+   (ordem de horas em KB grande), instituir gate idêntico (`-AllowWideRebuild`
+   reutilizado, ou switch dedicado).
+4. Se o custo for moderado e previsível, registrar como evidência em
+   `10-base-operacional-msbuild-headless.md` e manter o uso livre — provavelmente
+   com aviso explícito do agente quando essas flags forem passadas para KB grande.
+
+### Por que não foi feito junto da frente de `-AllowWideRebuild`
+
+- Sem evidência empírica do custo, instituir gate seria por analogia, não por
+  observação. Risco: criar atrito sem proteção real.
+- A frente original foi disparada pelo caso concreto de `ForceRebuild=true`. Manter
+  o escopo apertado evitou ampliar a frente sem necessidade.
+- O gate de `-ForceRebuild=true` já cobre o caso de maior dano observado. Cobrir
+  flags adjacentes pode ser feito incrementalmente conforme evidência empírica
+  for chegando.
+
+### Perguntas a responder antes de decidir
+
+- Em KB grande, `CompileMains=true` aumenta o tempo de `BuildAll` em ordem de
+  minutos, horas, ou só percentualmente?
+- `DetailedNavigation=true` afeta principalmente specify ou também a fase de
+  compile? Há condições onde fica caro mesmo em KB pequena?
+- O gate deve ser por flag (cada flag tem seu `-Allow*`) ou unificado
+  (`-AllowWideRebuild` cobre todas as flags amplas)?
+- Existe combinação dessas flags com `ForceRebuild=true` que faça sentido proteger
+  diferentemente?

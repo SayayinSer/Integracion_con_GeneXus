@@ -7,10 +7,10 @@ from app.schemas.schemas import ClienteCreate, ClienteUpdate
 
 class CRUDCliente(CRUDBase[Cliente, ClienteCreate, ClienteUpdate]):
     def create(self, db: Session, *, obj_in: ClienteCreate) -> Cliente:
-        statement = select(Cliente).where(Cliente.clientenombre == obj_in.clientenombre.upper())
+        statement = select(Cliente).where(Cliente.ClienteNombre == obj_in.ClienteNombre.upper())
         if db.exec(statement).first():
-            raise HTTPException(status_code=400, detail=f"El cliente '{obj_in.clientenombre}' ya existe.")
-        obj_in.clientenombre = obj_in.clientenombre.upper()
+            raise HTTPException(status_code=400, detail=f"El cliente '{obj_in.ClienteNombre}' ya existe.")
+        obj_in.ClienteNombre = obj_in.ClienteNombre.upper()
         return super().create(db, obj_in=obj_in)
 
 crud_cliente = CRUDCliente(Cliente)
