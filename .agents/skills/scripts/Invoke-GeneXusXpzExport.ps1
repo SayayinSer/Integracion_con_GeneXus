@@ -165,6 +165,57 @@ function Add-WarningMessage {
     }
 }
 
+function Add-GeneXusSubdirsToPath {
+    param([string]$ResolvedGeneXusDir)
+
+    $gxSubPathCandidates = @(
+        $ResolvedGeneXusDir,
+        (Join-Path $ResolvedGeneXusDir 'gxnet'),
+        (Join-Path $ResolvedGeneXusDir 'gxnet\bin'),
+        (Join-Path $ResolvedGeneXusDir 'gxnetcore')
+    )
+
+    $currentPathEntries = @($env:PATH -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $gxSubPathsAdded = @()
+    $gxSubPathsSkipped = @()
+
+    foreach ($candidate in $gxSubPathCandidates) {
+        if (-not (Test-Path -LiteralPath $candidate -PathType Container)) {
+            $gxSubPathsSkipped += $candidate
+            continue
+        }
+
+        $alreadyPresent = $false
+        foreach ($entry in $currentPathEntries) {
+            if ([string]::Equals($entry.TrimEnd('\'), $candidate.TrimEnd('\'), [System.StringComparison]::OrdinalIgnoreCase)) {
+                $alreadyPresent = $true
+                break
+            }
+        }
+
+        if (-not $alreadyPresent) {
+            $gxSubPathsAdded += $candidate
+            $currentPathEntries += $candidate
+        }
+    }
+
+    if ($gxSubPathsAdded.Count -gt 0) {
+        $env:PATH = ($gxSubPathsAdded -join ';') + ';' + $env:PATH
+    }
+
+    $script:PathEnrichment = [ordered]@{
+        applied        = ($gxSubPathsAdded.Count -gt 0)
+        subdirsAdded   = $gxSubPathsAdded
+        subdirsSkipped = $gxSubPathsSkipped
+    }
+
+    if ($gxSubPathsSkipped.Count -gt 0) {
+        Add-WarningMessage -Message ("Subdirs esperados do GeneXus ausentes em '{0}': {1}. Instalacao pode estar nao-padrao; tools internas chamadas por Process.Start sem caminho absoluto podem falhar." -f $ResolvedGeneXusDir, ($gxSubPathsSkipped -join ', '))
+    }
+
+    Add-StrategyTrace -Message ("PATH enriquecido preventivamente com subdirs do GeneXus para execucao headless de import/export: [{0}]. Subdirs ausentes: [{1}]." -f ($gxSubPathsAdded -join ', '), ($gxSubPathsSkipped -join ', '))
+}
+
 function Resolve-ProbeScriptPath {
     $scriptDirectory = Split-Path -Parent $PSCommandPath
     $probePath = Join-Path $scriptDirectory 'Test-GeneXusMsBuildSetup.ps1'
@@ -523,6 +574,11 @@ function Get-ExportExitCode {
 $script:BlockingReasons = New-Object System.Collections.Generic.List[string]
 $script:Warnings = New-Object System.Collections.Generic.List[string]
 $script:StrategyTrace = New-Object System.Collections.Generic.List[string]
+$script:PathEnrichment = [ordered]@{
+    applied        = $false
+    subdirsAdded   = @()
+    subdirsSkipped = @()
+}
 
 $resolvedLogPath = Get-FullPathSafe -PathValue $LogPath
 
@@ -564,6 +620,7 @@ try {
             observedContext = [ordered]@{
                 ActiveVersion = $null
                 ActiveEnvironment = $null
+                pathEnrichment = $script:PathEnrichment
             }
             resolvedPaths = [ordered]@{
                 GeneXusDir = $probeDiagnostic.resolvedPaths.GeneXusDir
@@ -642,6 +699,8 @@ try {
     $resolvedDependencyType = [string]$DependencyType
     $resolvedReferenceType = [string]$ReferenceType
 
+    Add-GeneXusSubdirsToPath -ResolvedGeneXusDir $resolvedGeneXusDir
+
     $exportTaskPropertyNames = Get-ExportTaskPropertyNames -ResolvedGeneXusDir $resolvedGeneXusDir
     $exportKbInfoPropertyName = Resolve-ExportKbInfoPropertyName -PropertyNames $exportTaskPropertyNames
     $supportsExportAll = Test-ExportTaskSupportsProperty -PropertyNames $exportTaskPropertyNames -PropertyName 'ExportAll'
@@ -680,6 +739,7 @@ try {
             observedContext = [ordered]@{
                 ActiveVersion = $null
                 ActiveEnvironment = $null
+                pathEnrichment = $script:PathEnrichment
             }
             resolvedPaths = [ordered]@{
                 GeneXusDir = $resolvedGeneXusDir
@@ -720,21 +780,61 @@ try {
     Add-StrategyTrace -Message ('Arquivo .msbuild temporário gerado em: {0}' -f $msBuildFilePath)
 
     $msBuildExitCode = Invoke-MsBuildFile -ResolvedMsBuildPath $resolvedMsBuildPath -MsBuildFilePath $msBuildFilePath -StdOutPath $stdOutPath -StdErrPath $stdErrPath
-    $stdOutText = Read-TextFileSafe -PathValue $stdOutPath
-    $stdErrText = Read-TextFileSafe -PathValue $stdErrPath
-    $stdErrNoise    = [string]::Join("`n", ([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }))
-    $stdErrFiltered = ($stdErrText -replace '(?m)^context \[anonymous\] \d+:\d+ attribute component isn''t defined\r?\n?', '').Trim()
-    $gxWarningLines = @([regex]::Matches($stdOutText, '(?m)[^\r\n]*\(\d+,\d+\)\s*:\s*warning\s*:[^\r\n]*') | ForEach-Object { $_.Value.Trim() })
+    # Pos-processamento resiliente: a partir daqui o MSBuild ja rodou.
+    # Falha local nao pode descartar evidencia real do MSBuild (incluindo __EXPORTED_FILE__).
+    $postProcessingFailed    = $false
+    $postProcessingError     = $null
+    $stdOutText              = ''
+    $stdErrText              = ''
+    $stdErrNoise             = ''
+    $stdErrFiltered          = ''
+    $gxWarningLines          = @()
+    $openOutput              = $null
+    $activeVersionOutput     = $null
+    $activeEnvironmentOutput = $null
+    $exportedFileMarker      = $null
 
-    $openOutput = Get-MarkerValue -Text $stdOutText -Marker '__OPEN_OUTPUT__='
-    $activeVersionOutput = Get-RegexValue -Text $stdOutText -Pattern "The active version is '([^']+)'"
-    $activeEnvironmentOutput = Get-RegexValue -Text $stdOutText -Pattern "The active environment is '([^']+)'"
-    $exportedFileMarker = Get-MarkerValue -Text $stdOutText -Marker '__EXPORTED_FILE__='
+    try {
+        $stdOutText = Read-TextFileSafe -PathValue $stdOutPath
+        $stdErrText = Read-TextFileSafe -PathValue $stdErrPath
+        $stdErrMatches  = @([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value })
+        $stdErrNoise    = [string]::Join("`n", $stdErrMatches)
+        $stdErrFiltered = ($stdErrText -replace '(?m)^context \[anonymous\] \d+:\d+ attribute component isn''t defined\r?\n?', '').Trim()
+        $gxWarningLines = @([regex]::Matches($stdOutText, '(?m)[^\r\n]*\(\d+,\d+\)\s*:\s*warning\s*:[^\r\n]*') | ForEach-Object { $_.Value.Trim() })
 
-    if (-not [string]::IsNullOrWhiteSpace($VersionName) -and [string]::IsNullOrWhiteSpace($activeVersionOutput)) {
+        $openOutput = Get-MarkerValue -Text $stdOutText -Marker '__OPEN_OUTPUT__='
+        $activeVersionOutput = Get-RegexValue -Text $stdOutText -Pattern "The active version is '([^']+)'"
+        $activeEnvironmentOutput = Get-RegexValue -Text $stdOutText -Pattern "The active environment is '([^']+)'"
+        $exportedFileMarker = Get-MarkerValue -Text $stdOutText -Marker '__EXPORTED_FILE__='
+    }
+    catch {
+        $postProcessingFailed = $true
+        $postProcessingError  = $_.Exception.Message
+        Add-StrategyTrace -Message ('Pos-processamento falhou apos MSBuild: {0}' -f $postProcessingError)
+        if ($stdOutText) {
+            try { $exportedFileMarker = Get-MarkerValue -Text $stdOutText -Marker '__EXPORTED_FILE__=' } catch {}
+        }
+    }
+
+    $setVersionFailed     = [bool]($stdOutText -match 'Set Active Version falhou')
+    $setEnvironmentFailed = [bool]($stdOutText -match 'Set Active Environment falhou')
+    $missingEnvironmentOutput = Get-RegexValue -Text $stdOutText -Pattern "Ambiente '([^']+)' n[aã]o existe"
+
+    if ($setVersionFailed) {
+        $actualVersion = if (-not [string]::IsNullOrWhiteSpace($activeVersionOutput)) { $activeVersionOutput } else { '(desconhecida)' }
+        Add-BlockingReason -Reason ("SetActiveVersion falhou — a versao '{0}' nao existe nesta KB. A versao ativa no momento da abertura era '{1}'. Para usar a versao ativa, omita o parametro -VersionName." -f $VersionName, $actualVersion)
+    }
+
+    if ($setEnvironmentFailed) {
+        $actualEnvironment = if (-not [string]::IsNullOrWhiteSpace($activeEnvironmentOutput)) { $activeEnvironmentOutput } else { '(desconhecido)' }
+        $requestedEnvironment = if (-not [string]::IsNullOrWhiteSpace($missingEnvironmentOutput)) { $missingEnvironmentOutput } else { $EnvironmentName }
+        Add-BlockingReason -Reason ("SetActiveEnvironment falhou — o Environment '{0}' nao existe nesta KB. O Environment ativo no momento da abertura era '{1}'. Para usar o Environment ativo, omita o parametro -EnvironmentName." -f $requestedEnvironment, $actualEnvironment)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($VersionName) -and [string]::IsNullOrWhiteSpace($activeVersionOutput) -and -not $setVersionFailed) {
         Add-WarningMessage -Message 'Versão solicitada, mas o retorno de GetActiveVersion veio vazio.'
     }
-    if (-not [string]::IsNullOrWhiteSpace($EnvironmentName) -and [string]::IsNullOrWhiteSpace($activeEnvironmentOutput)) {
+    if (-not [string]::IsNullOrWhiteSpace($EnvironmentName) -and [string]::IsNullOrWhiteSpace($activeEnvironmentOutput) -and -not $setEnvironmentFailed) {
         Add-WarningMessage -Message 'Environment solicitado, mas o retorno de GetActiveEnvironment veio vazio.'
     }
 
@@ -744,13 +844,25 @@ try {
     }
 
     $exportExitCode = Get-ExportExitCode -MsBuildExitCode $msBuildExitCode -ResolvedXpzPath $resolvedXpzPath
-    $status = if ($exportExitCode -eq 0) { 'sucesso operacional' } else { 'falha operacional' }
-    $summary = if ($exportExitCode -eq 0) { 'Exportação headless concluída e XPZ gerado.' } else { 'Exportação headless falhou durante a execução do MSBuild.' }
+    if ($exportExitCode -eq 0) {
+        if ($postProcessingFailed) {
+            $status = 'sucesso operacional com falha no pos-processamento'
+            $summary = 'Exportação headless concluída e XPZ gerado, mas o pós-processamento local falhou. Evidências do MSBuild preservadas.'
+        } else {
+            $status = 'sucesso operacional'
+            $summary = 'Exportação headless concluída e XPZ gerado.'
+        }
+    } else {
+        $status = 'falha operacional'
+        $summary = 'Exportação headless falhou durante a execução do MSBuild.'
+    }
 
     if ($exportExitCode -ne 0) {
-        Add-BlockingReason -Reason ('Execução MSBuild terminou com exitCode {0}.' -f $msBuildExitCode)
         if ($stdOutText -match "A versão '([^']+)' não existe") {
             Add-BlockingReason -Reason ("SetActiveVersion rejeitou VersionName '$($Matches[1])' — provavel incompatibilidade entre nome descritivo retornado por GetVersionProperty e identificador aceito pela task; para exportar da versao ativa, omitir -VersionName.")
+        }
+        if ($script:BlockingReasons.Count -eq 0) {
+            Add-BlockingReason -Reason 'MSBuild falhou sem causa acionável classificada; consulte executionEvidence e logs brutos nos artefatos.'
         }
     }
 
@@ -768,6 +880,16 @@ try {
         status = $status
         summary = $summary
         exitCode = $exportExitCode
+        msBuildExitCode      = $msBuildExitCode
+        executionEvidence = [ordered]@{
+            msBuildExitCode = $msBuildExitCode
+            msBuildFailed = ($msBuildExitCode -ne 0)
+            wrapperExitCode = $exportExitCode
+            StdOutPath = $stdOutPath
+            StdErrPath = $stdErrPath
+        }
+        postProcessingFailed = $postProcessingFailed
+        postProcessingError  = $postProcessingError
         stage = 'export'
         requestedContext = [ordered]@{
             VersionName = $VersionName
@@ -782,6 +904,7 @@ try {
             ActiveVersion = $activeVersionOutput
             ActiveEnvironment = $activeEnvironmentOutput
             OpenOutput = $openOutput
+            pathEnrichment = $script:PathEnrichment
         }
         resolvedPaths = [ordered]@{
             GeneXusDir = $resolvedGeneXusDir
@@ -812,8 +935,51 @@ try {
         strategyTrace = @($probeStage.Diagnostic.strategyTrace + $script:StrategyTrace)
     }
 
-    $json = ConvertTo-JsonText -InputObject $diagnostic
-    Write-JsonLog -TargetLogPath $resolvedLogPath -JsonPayload $json
+    try {
+        $json = ConvertTo-JsonText -InputObject $diagnostic
+    }
+    catch {
+        $postProcessingFailed = $true
+        $postProcessingError  = ('Falha ao serializar diagnostico apos MSBuild: {0}' -f $_.Exception.Message)
+        Add-StrategyTrace -Message $postProcessingError
+        if ($exportExitCode -eq 0) {
+            $status = 'sucesso operacional com falha no pos-processamento'
+            $summary = 'Exportação headless concluída e XPZ gerado, mas a serialização do diagnóstico falhou. Evidências primárias preservadas no log bruto.'
+        }
+        $fallback = [ordered]@{
+            status                = $status
+            summary               = $summary
+            exitCode              = $exportExitCode
+            msBuildExitCode       = $msBuildExitCode
+            executionEvidence     = [ordered]@{
+                msBuildExitCode = $msBuildExitCode
+                msBuildFailed   = ($msBuildExitCode -ne 0)
+                wrapperExitCode = $exportExitCode
+                StdOutPath      = $stdOutPath
+                StdErrPath      = $stdErrPath
+            }
+            postProcessingFailed  = $true
+            postProcessingError   = $postProcessingError
+            stage                 = 'export'
+            artifacts             = [ordered]@{
+                MsBuildStdoutLogPath = $stdOutPath
+                MsBuildStderrLogPath = $stdErrPath
+                ExecutionLogPath     = $resolvedLogPath
+                XpzPath              = $resolvedXpzPath
+            }
+            exportedFileMarker    = $exportedFileMarker
+            note                  = 'Diagnostico completo nao pode ser serializado; consultar msbuild.stdout.log para evidencia primaria.'
+        }
+        try {
+            $json = $fallback | ConvertTo-Json -Depth 3
+        }
+        catch {
+            $msBuildExitCodeText = if ($null -eq $msBuildExitCode) { 'null' } else { [string]$msBuildExitCode }
+            $msBuildFailedText = if ($null -eq $msBuildExitCode) { 'null' } elseif ($msBuildExitCode -ne 0) { 'true' } else { 'false' }
+            $json = '{"status":"' + $status + '","exitCode":' + $exportExitCode + ',"msBuildExitCode":' + $msBuildExitCodeText + ',"executionEvidence":{"msBuildExitCode":' + $msBuildExitCodeText + ',"msBuildFailed":' + $msBuildFailedText + ',"wrapperExitCode":' + $exportExitCode + '},"postProcessingFailed":true,"note":"Fallback minimo: serializacao do fallback tambem falhou. Consultar msbuild.stdout.log."}'
+        }
+    }
+    try { Write-JsonLog -TargetLogPath $resolvedLogPath -JsonPayload $json } catch {}
     Write-Output $json
     exit $exportExitCode
 }
@@ -822,6 +988,9 @@ catch {
         status = 'falha operacional'
         summary = 'Falha interna do script antes de concluir a exportação.'
         exitCode = 90
+        msBuildExitCode      = $null
+        postProcessingFailed = $false
+        postProcessingError  = $null
         stage = 'export'
         requestedContext = [ordered]@{
             VersionName = $VersionName

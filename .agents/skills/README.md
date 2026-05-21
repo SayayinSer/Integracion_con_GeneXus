@@ -40,7 +40,7 @@ Além dessa base principal, a raiz também pode conter documentação operaciona
 - `07-open-points-e-checklist.md`
 - `08-guia-para-agente-gpt.md`
 - `09-inventario-e-rastreabilidade-publica.md`
-- `10-base-operacional-msbuild-headless.md`: base operacional da trilha MSBuild headless, usada pela skill `xpz-msbuild-import-export`
+- `10-base-operacional-msbuild-headless.md`: base operacional da trilha MSBuild headless, usada pelas skills `xpz-msbuild-import-export` e `xpz-msbuild-build`
 
 Os arquivos `10-matriz-part-types-por-tipo.md`, `11-campos-estaveis-vs-variaveis.md` e `12-diffs-estruturais-por-tipo.md` sao stubs de compatibilidade retroativa: cada um redireciona para o equivalente na serie `01` (`01b`, `01c`, `01d`). Nao contem conteudo proprio e nao devem ser usados como fonte direta.
 
@@ -129,7 +129,11 @@ Se você quer entender a base rapidamente:
 - exportacao parcial pela IDE ou por `MSBuild`, mesmo com lista explicita de objetos, pode colocar no `.xpz` **objetos adicionais** (dependencias, referencias, modulos organizacionais); **nao** assumir que o conteudo do pacote coincide com a lista nominal sem inventariar o artefato
 - antes de **importacao real** headless, o agente deve **listar todos os objetos** do pacote e confrontar com o delta declarado; extras nao pedidos num pacote cirurgico exigem **ABORT** ou confirmacao explicita do usuario (pormenor nas skills `xpz-msbuild-import-export` e `xpz-builder`, e em `10-base-operacional-msbuild-headless.md`)
 - **evitar** o anti-padrao export da KB como “casca” de `.xpz`, substituicao manual de nos e reempacotamento **sem** esse inventario; quando o XML ja esta na pasta paralela, preferir `import_file.xml` montado por motor estruturado compartilhado (`Build-GeneXusImportFileEnvelope.ps1` ou `New-XpzImportPackage.ps1`/`.py`) com `KMW`/`Source` valido e, em pacote misto/complexo, molde real comparavel
+- `-TemplatePackagePath` em `Build-GeneXusImportFileEnvelope.ps1` e `New-XpzImportPackage.ps1`/`.py` aceita tanto `.import_file.xml`/XML quanto `.xpz` real comparavel; quando o template traz `Attributes` de topo e a frente nao traz raizes `Attribute` explicitas, o motor preserva esses `Attributes`
+- para `Panel`, especialmente Panel SD, tratar `level id` + `layout id` como par acoplado; nao gera-los como GUIDs independentes; quando a regra de derivacao nao estiver provada, preservar o par a partir de Panel SD exportado pela IDE da mesma KB
+- os wrappers `Test-GeneXusXpzImportPreview.ps1` e `Invoke-GeneXusXpzImport.ps1` emitem `msbuild.import.signals.json` ao lado dos logs brutos (via `Read-MsBuildImportSignals.ps1`) para leitura compacta de itens importados, warnings, erros e versao/Environment ativos sem despejar stdout inteiro
 - **nao** iniciar exportacao headless da KB quando o pedido foi **apenas** importar alteracoes ja existentes na pasta paralela, salvo pedido ou confirmacao explicita de que o export e indispensavel
+- antes de importacao real via MSBuild, a skill `xpz-kb-parallel-setup` executa uma verificacao consultiva de **capacidade de importacao headless** (presenca de `Test-GeneXusImportFileEnvelope.ps1`, `Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzImport.ps1` no motor compartilhado e coerencia documental minima de `xpz-msbuild-import-export` quanto a aceitacao de `.import_file.xml` como insumo e a `ImportKbInformation` tri-state); capacidade defasada deve bloquear a importacao real e encaminhar para `xpz-msbuild-import-export`, nao reinterpretar o contrato localmente
 
 ### Carga inicial
 
@@ -174,6 +178,8 @@ Se você quer entender a base rapidamente:
 - quando `XpzExportadosPelaIDE` ainda não existir, o agente deve perguntar onde o usuário pretende salvar os `.xpz` antes de prosseguir com o processamento
 - no setup inicial da pasta paralela da KB, se o caminho da pasta nativa da KB nao vier informado, o agente deve pedir esse caminho ao usuario antes de concluir o setup
 - no setup inicial da pasta paralela da KB, `kb-source-metadata.md` deve nascer em formato compativel com o motor compartilhado e preservar o campo nominal `last_xpz_materialization_run_at`
+- no setup inicial da pasta paralela da KB, quando a pasta nativa da KB estiver confirmada, a identidade estavel deve ser reconciliada a partir da KB nativa local por `scripts/Resolve-GeneXusKbIdentity.ps1`; campos ausentes em `kb-source-metadata.md` podem ser preenchidos por `scripts/Update-XpzKbSourceMetadataIdentity.ps1` em frente aprovada, preservando os demais metadados
+- `Source` vazio ou incompleto em XPZ pode ser metadado incompleto da propria KB; `Source/@kb` preenchido com GUID de outra KB indica pacote cross-KB e bloqueia importacao headless por agente, encaminhando para avaliacao/importacao manual pela IDE
 - quando `ObjetosDaKbEmXml` ainda não existir, o agente deve tratar isso como KB ainda não materializada e parar antes de assumir qualquer snapshot
 - ao concluir o setup inicial da pasta paralela da KB, o agente deve deixar explicito que a estrutura esta pronta, mas `ObjetosDaKbEmXml` ainda nao foi materializada
 - ao concluir o setup inicial, o agente deve oferecer `A)` exportacao do `.xpz` full pela IDE para `XpzExportadosPelaIDE` ou `B)` geracao do `.xpz` full a partir da pasta nativa da KB via trilha `MSBuild`, seguida de materializacao dos XMLs
@@ -185,6 +191,9 @@ Se você quer entender a base rapidamente:
 - esse script pode ser usado por projetos de produção que mantenham acervos versionados de XMLs extraidos de `XPZ`
 - a pasta `scripts/` existe como apoio operacional, analitico e editorial compartilhavel, mas nao e fonte normativa da documentacao consolidada da raiz
 - os scripts públicos desta raiz devem operar por parâmetros explícitos de entrada e saída, sem depender de caminhos absolutos privados
+- os scripts públicos desta raiz têm contrato de runtime em `pwsh` com PowerShell 7.4 LTS ou superior; usar a versão LTS mais recente disponível é preferível; Windows PowerShell 5.1 (`powershell.exe`) não é runtime suportado para esses scripts
+- a validação automática de parse PowerShell da base é `scripts/Test-PsScriptsParse.ps1`, também executada pelo workflow `.github/workflows/parse-ps-scripts.yml`; ela verifica `scripts/*.ps1` e `.example.ps1` das skills fora de `historico/` sob o contrato `pwsh` 7.4+
+- a skill `xpz-kb-parallel-setup` deve criar/validar um wrapper local `Test-*KbPowerShellRuntime.ps1`; esse wrapper precisa barrar qualquer uso operacional da pasta paralela quando `pwsh` 7.4 LTS ou superior estiver ausente
 - os `.example.ps1` publicados nas skills funcionam como exemplos metodologicos importantes para bootstrap tecnico e reconstrucao assistida de wrappers locais finais
 - esses `.example.ps1` nao substituem o wrapper local real da pasta paralela da KB e nao devem virar fallback automatico de execucao no fluxo normal
 - quando a sessao ja publicar o caminho de uma skill ou de seus exemplos, esse caminho publicado prevalece sobre heuristica local de instalacao
@@ -223,7 +232,7 @@ Además de esa base principal, la raíz también puede contener documentación o
 - `07-open-points-e-checklist.md`
 - `08-guia-para-agente-gpt.md`
 - `09-inventario-e-rastreabilidade-publica.md`
-- `10-base-operacional-msbuild-headless.md`: base operacional de la trilha MSBuild headless, usada por la skill `xpz-msbuild-import-export`
+- `10-base-operacional-msbuild-headless.md`: base operacional de la trilha MSBuild headless, usada por las skills `xpz-msbuild-import-export` y `xpz-msbuild-build`
 
 Los archivos `10-matriz-part-types-por-tipo.md`, `11-campos-estaveis-vs-variaveis.md` y `12-diffs-estruturais-por-tipo.md` son stubs de compatibilidad retroactiva: cada uno redirige al equivalente en la serie `01` (`01b`, `01c`, `01d`). No contienen contenido propio y no deben usarse como fuente directa.
 
@@ -312,7 +321,11 @@ Si quieres entender la base rápidamente:
 - la exportación parcial por IDE o por `MSBuild`, aun con lista explícita de objetos, puede incluir en el `.xpz` **objetos adicionales** (dependencias, referencias, módulos organizacionales); **no** asumir que el contenido coincide con la lista nominal sin inventariar el artefacto
 - antes de una **importación real** headless, el agente debe **listar todos los objetos** del paquete y confrontarlos con el delta declarado; extras no pedidos en un paquete quirúrgico implican **ABORT** o confirmación explícita del usuario (detalle en las skills `xpz-msbuild-import-export` y `xpz-builder`, y en `10-base-operacional-msbuild-headless.md`)
 - **evitar** el anti-patrón export de la KB como “cáscara” de `.xpz`, sustitución manual de nodos y reempaquetado **sin** ese inventario; cuando el XML ya está en la carpeta paralela, preferir `import_file.xml` montado por motor estructurado compartido (`Build-GeneXusImportFileEnvelope.ps1` o `New-XpzImportPackage.ps1`/`.py`) con `KMW`/`Source` válido y, en paquete mixto/complejo, molde real comparable
+- `-TemplatePackagePath` en `Build-GeneXusImportFileEnvelope.ps1` y `New-XpzImportPackage.ps1`/`.py` acepta tanto `.import_file.xml`/XML como `.xpz` real comparable; cuando el template trae `Attributes` de tope y el frente no trae raíces `Attribute` explícitas, el motor preserva esos `Attributes`
+- para `Panel`, especialmente Panel SD, tratar `level id` + `layout id` como par acoplado; no generarlos como GUIDs independientes; cuando la regla de derivación no esté probada, preservar el par a partir de un Panel SD exportado por la IDE de la misma KB
+- los wrappers `Test-GeneXusXpzImportPreview.ps1` e `Invoke-GeneXusXpzImport.ps1` emiten `msbuild.import.signals.json` junto a los logs en bruto (vía `Read-MsBuildImportSignals.ps1`) para lectura compacta de ítems importados, warnings, errores y versión/Environment activos sin volcar el stdout completo
 - **no** iniciar exportación headless de la KB cuando lo pedido fue **solo** importar cambios ya existentes en la carpeta paralela, salvo pedido o confirmación explícita de que el export es indispensable
+- antes de una importación real vía MSBuild, la skill `xpz-kb-parallel-setup` ejecuta una verificación consultiva de **capacidad de importación headless** (presencia de `Test-GeneXusImportFileEnvelope.ps1`, `Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzImport.ps1` en el motor compartido y coherencia documental mínima de `xpz-msbuild-import-export` en cuanto a la aceptación de `.import_file.xml` como insumo y a `ImportKbInformation` tri-state); una capacidad desfasada debe bloquear la importación real y encaminar a `xpz-msbuild-import-export`, no reinterpretar el contrato localmente
 
 ### Carga inicial
 
@@ -357,6 +370,8 @@ Si quieres entender la base rápidamente:
 - cuando `XpzExportadosPelaIDE` todavía no exista, el agente debe preguntar dónde el usuario pretende guardar los `.xpz` antes de continuar con el procesamiento
 - en el setup inicial de la carpeta paralela de la KB, si el camino de la carpeta nativa de la KB no viene informado, el agente debe pedir ese camino al usuario antes de concluir el setup
 - en el setup inicial de la carpeta paralela de la KB, `kb-source-metadata.md` debe nacer en formato compatible con el motor compartido y preservar el campo nominal `last_xpz_materialization_run_at`
+- en el setup inicial de la carpeta paralela de la KB, cuando la carpeta nativa de la KB este confirmada, la identidad estable debe reconciliarse desde la KB nativa local mediante `scripts/Resolve-GeneXusKbIdentity.ps1`; los campos ausentes en `kb-source-metadata.md` pueden ser completados por `scripts/Update-XpzKbSourceMetadataIdentity.ps1` en una frente aprobada, preservando los demas metadatos
+- `Source` vacio o incompleto en un XPZ puede ser metadata incompleta de la propia KB; `Source/@kb` completado con GUID de otra KB indica paquete cross-KB y bloquea la importacion headless por agente, encaminando a evaluacion/importacion manual por la IDE
 - cuando `ObjetosDaKbEmXml` todavía no exista, el agente debe tratar esto como KB aún no materializada y detenerse antes de asumir cualquier snapshot
 - al concluir el setup inicial de la carpeta paralela de la KB, el agente debe dejar explícito que la estructura está lista, pero `ObjetosDaKbEmXml` todavía no fue materializada
 - al concluir el setup inicial, el agente debe ofrecer `A)` exportación del `.xpz` full por la IDE hacia `XpzExportadosPelaIDE` o `B)` generación del `.xpz` full a partir de la carpeta nativa de la KB por la trilha `MSBuild`, seguida de materialización de los XMLs
@@ -368,6 +383,9 @@ Si quieres entender la base rápidamente:
 - ese script puede ser usado por proyectos de producción que mantengan acervos versionados de XML extraídos de `XPZ`
 - la carpeta `scripts/` existe como apoyo operativo, analítico y editorial compartible, pero no es fuente normativa de la documentación consolidada de la raíz
 - los scripts públicos de esta raíz deben operar por parámetros explícitos de entrada y salida, sin depender de rutas absolutas privadas
+- los scripts públicos de esta raíz tienen contrato de runtime en `pwsh` con PowerShell 7.4 LTS o superior; usar la versión LTS más reciente disponible es preferible; Windows PowerShell 5.1 (`powershell.exe`) no es runtime soportado para esos scripts
+- la validación automática de parse PowerShell de la base es `scripts/Test-PsScriptsParse.ps1`, también ejecutada por el workflow `.github/workflows/parse-ps-scripts.yml`; verifica `scripts/*.ps1` y `.example.ps1` de las skills fuera de `historico/` bajo el contrato `pwsh` 7.4+
+- la skill `xpz-kb-parallel-setup` debe crear/validar un wrapper local `Test-*KbPowerShellRuntime.ps1`; ese wrapper debe bloquear cualquier uso operativo de la carpeta paralela cuando falte `pwsh` 7.4 LTS o superior
 - los `.example.ps1` publicados en las skills funcionan como ejemplos metodológicos importantes para bootstrap técnico y reconstrucción asistida de wrappers locales finales
 - esos `.example.ps1` no sustituyen el wrapper local real de la carpeta paralela de la KB y no deben convertirse en fallback automático de ejecución en el flujo normal
 - cuando la sesión ya publique la ruta de una skill o de sus ejemplos, esa ruta publicada prevalece sobre cualquier heurística local de instalación
@@ -406,7 +424,7 @@ In addition to that main base, the root may also contain complementary operation
 - `07-open-points-e-checklist.md`
 - `08-guia-para-agente-gpt.md`
 - `09-inventario-e-rastreabilidade-publica.md`
-- `10-base-operacional-msbuild-headless.md`: operational base for the headless MSBuild trail, used by the `xpz-msbuild-import-export` skill
+- `10-base-operacional-msbuild-headless.md`: operational base for the headless MSBuild trail, used by the `xpz-msbuild-import-export` and `xpz-msbuild-build` skills
 
 The files `10-matriz-part-types-por-tipo.md`, `11-campos-estaveis-vs-variaveis.md`, and `12-diffs-estruturais-por-tipo.md` are backward-compatibility stubs: each one redirects to its equivalent in the `01` series (`01b`, `01c`, `01d`). They contain no content of their own and must not be used as a direct source.
 
@@ -495,7 +513,11 @@ If you want to understand the repository quickly:
 - partial export from the IDE or `MSBuild`, even with an explicit object list, may place **additional objects** in the `.xpz` (dependencies, references, organizational modules); **do not** assume package contents match the nominal list without inspecting the artifact
 - before **real** headless import, the agent must **list every object** in the package and reconcile with the declared delta; unrequested extras in a surgical package require **ABORT** or explicit user confirmation (see skills `xpz-msbuild-import-export` and `xpz-builder`, and `10-base-operacional-msbuild-headless.md`)
 - **avoid** the anti-pattern of KB export as a `.xpz` "shell", manual node replacement, and repackaging **without** that inventory; when the XML already lives in the parallel folder, prefer `import_file.xml` built by a shared structured engine (`Build-GeneXusImportFileEnvelope.ps1` or `New-XpzImportPackage.ps1`/`.py`) with valid `KMW`/`Source` and, for mixed/complex packages, a comparable real template
+- `-TemplatePackagePath` in `Build-GeneXusImportFileEnvelope.ps1` and `New-XpzImportPackage.ps1`/`.py` accepts either `.import_file.xml`/XML or a comparable real `.xpz`; when the template carries top-level `Attributes` and the front does not provide explicit `Attribute` roots, the engine preserves those `Attributes`
+- for `Panel`, especially Panel SD, treat `level id` + `layout id` as a coupled pair; do not generate them as independent GUIDs; when the derivation rule is not proven, preserve the pair from a Panel SD exported by the IDE of the same KB
+- the wrappers `Test-GeneXusXpzImportPreview.ps1` and `Invoke-GeneXusXpzImport.ps1` emit `msbuild.import.signals.json` next to the raw logs (via `Read-MsBuildImportSignals.ps1`) for compact reading of imported items, warnings, errors, and active version/Environment without dumping the full stdout
 - **do not** start headless KB export when the user asked **only** to import changes already present in the parallel folder, unless the user explicitly requests export or confirms it is indispensable
+- before a real MSBuild import, the `xpz-kb-parallel-setup` skill runs a consultive check of **headless import capability** (presence of `Test-GeneXusImportFileEnvelope.ps1`, `Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzImport.ps1` in the shared engine, and minimum documentation coherence of `xpz-msbuild-import-export` regarding acceptance of `.import_file.xml` as input and `ImportKbInformation` as tri-state); stale capability must block the real import and route to `xpz-msbuild-import-export`, not reinterpret the contract locally
 
 ### Initial load
 
@@ -540,6 +562,8 @@ If you want to understand the repository quickly:
 - when `XpzExportadosPelaIDE` does not exist yet, the agent must ask where the user intends to save the `.xpz` files before continuing with processing
 - in the initial setup of the KB parallel folder, if the native KB folder path is not provided, the agent must ask the user for that path before concluding setup
 - in the initial setup of the KB parallel folder, `kb-source-metadata.md` must start in a format compatible with the shared engine and preserve the nominal `last_xpz_materialization_run_at` field
+- in the initial setup of the KB parallel folder, when the native KB folder is confirmed, stable identity must be reconciled from the local native KB through `scripts/Resolve-GeneXusKbIdentity.ps1`; missing fields in `kb-source-metadata.md` may be filled by `scripts/Update-XpzKbSourceMetadataIdentity.ps1` in an approved front, preserving the remaining metadata
+- empty or incomplete `Source` in an XPZ may be incomplete metadata from the KB itself; `Source/@kb` filled with another KB's GUID indicates a cross-KB package and blocks agent-driven headless import, routing the case to manual IDE evaluation/import
 - when `ObjetosDaKbEmXml` does not exist yet, the agent must treat this as a KB not yet materialized and stop before assuming any snapshot
 - when concluding the initial setup of the KB parallel folder, the agent must make it explicit that the structure is ready, but `ObjetosDaKbEmXml` has not yet been materialized
 - when concluding the initial setup, the agent must offer `A)` full `.xpz` export by the IDE into `XpzExportadosPelaIDE` or `B)` full `.xpz` generation from the native KB folder through the `MSBuild` track, followed by XML materialization
@@ -551,6 +575,9 @@ If you want to understand the repository quickly:
 - that script can be used by production projects that keep versioned XML archives extracted from `XPZ`
 - the `scripts/` folder exists as shared operational, analytical, and editorial support, but it is not the normative source of the consolidated root documentation
 - the public scripts in this root must operate through explicit input and output parameters, without depending on private absolute paths
+- the public scripts in this root have a runtime contract of `pwsh` with PowerShell 7.4 LTS or newer; using the latest available LTS version is preferred; Windows PowerShell 5.1 (`powershell.exe`) is not a supported runtime for these scripts
+- the base's automatic PowerShell parse validation is `scripts/Test-PsScriptsParse.ps1`, also run by the `.github/workflows/parse-ps-scripts.yml` workflow; it checks `scripts/*.ps1` and skill `.example.ps1` files outside `historico/` under the `pwsh` 7.4+ contract
+- the `xpz-kb-parallel-setup` skill must create/validate a local `Test-*KbPowerShellRuntime.ps1` wrapper; that wrapper must block any operational use of the parallel folder when `pwsh` 7.4 LTS or newer is missing
 - the `.example.ps1` files published inside the skills act as important methodological examples for technical bootstrap and assisted reconstruction of final local wrappers
 - those `.example.ps1` files do not replace the real local wrapper of the KB parallel folder and must not become an automatic execution fallback in the normal flow
 - when the session already publishes the path of a skill or its examples, that published path takes precedence over local installation heuristics

@@ -691,6 +691,11 @@ $script:BlockingReasons = New-Object System.Collections.Generic.List[string]
 $script:Warnings        = New-Object System.Collections.Generic.List[string]
 $script:StrategyTrace   = New-Object System.Collections.Generic.List[string]
 $script:TimingLog       = [ordered]@{}
+$script:PathEnrichment  = [ordered]@{
+    applied        = $false
+    subdirsAdded   = @()
+    subdirsSkipped = @()
+}
 $script:WatcherContext  = [ordered]@{
     startWatcherRequested = $StartWatcher.IsPresent
     watcherLaunched       = $false
@@ -733,6 +738,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -795,6 +801,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -855,6 +862,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -915,6 +923,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -975,6 +984,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = (Get-FullPathSafe -PathValue $GeneXusDir)
@@ -1054,6 +1064,7 @@ try {
                 ReorgDetected     = $false
                 TimedOut          = $false
                 MsBuildExitCode   = $null
+                pathEnrichment    = $script:PathEnrichment
             }
             resolvedPaths    = [ordered]@{
                 GeneXusDir       = $probeDiagnostic.resolvedPaths.GeneXusDir
@@ -1089,7 +1100,35 @@ try {
     $resolvedMsBuildPath = [string]$probeStage.Diagnostic.resolvedPaths.MsBuildPath
     $resolvedKbPath      = [string]$probeStage.Diagnostic.resolvedPaths.KbPath
 
-    # Resolver parâmetros efetivos de reorg
+    # Enriquecer $env:PATH com subdirs do GeneXus que hospedam tools chamadas internamente
+    # por Process.Start sem caminho absoluto (gxexec, UpdConfigWeb, BuildService, Reor.exe).
+    # Sem isso, builds headless cuja KB atinja as fases "DeveloperMenu Compilacao" ou
+    # "Atualizacao de configuracao da web" falham com "Nao foi possivel encontrar uma parte
+    # do caminho". A IDE GeneXus ja faz esse enriquecimento implicito; MSBuild via wrapper
+    # externo herda apenas o PATH do shell do agente. Evidencia empirica:
+    # Temp\xpz-build-verify-path-20260520-r1d (sem enriquecimento, falha) vs
+    # Temp\xpz-build-verify-path-20260520-r2 (com enriquecimento, compilou limpo).
+    $gxSubPathCandidates = @(
+        $resolvedGeneXusDir,
+        (Join-Path $resolvedGeneXusDir 'gxnet'),
+        (Join-Path $resolvedGeneXusDir 'gxnet\bin'),
+        (Join-Path $resolvedGeneXusDir 'gxnetcore')
+    )
+    $gxSubPathsAdded   = @($gxSubPathCandidates | Where-Object { Test-Path -LiteralPath $_ })
+    $gxSubPathsSkipped = @($gxSubPathCandidates | Where-Object { -not (Test-Path -LiteralPath $_) })
+    if ($gxSubPathsAdded.Count -gt 0) {
+        $env:PATH = ($gxSubPathsAdded -join ';') + ';' + $env:PATH
+    }
+    $script:PathEnrichment = [ordered]@{
+        applied        = ($gxSubPathsAdded.Count -gt 0)
+        subdirsAdded   = $gxSubPathsAdded
+        subdirsSkipped = $gxSubPathsSkipped
+    }
+    if ($gxSubPathsSkipped.Count -gt 0) {
+        Add-WarningMessage -Message ("Subdirs esperados do GeneXus ausentes em '{0}': {1}. Instalacao pode estar nao-padrao; tools internas chamadas por Process.Start sem caminho absoluto (gxexec, UpdConfigWeb) podem falhar." -f $resolvedGeneXusDir, ($gxSubPathsSkipped -join ', '))
+    }
+    Add-StrategyTrace -Message ("PATH enriquecido com subdirs do GeneXus para tools internas: [{0}]. Subdirs ausentes: [{1}]." -f ($gxSubPathsAdded -join ', '), ($gxSubPathsSkipped -join ', '))
+
     $effectiveFailIfReorg       = $FailIfReorg
     $effectiveDoNotExecuteReorg = $DoNotExecuteReorg
     $allowReorgConfirmed        = $false
@@ -1153,6 +1192,7 @@ try {
                         ReorgDetected     = $false
                         TimedOut          = $false
                         MsBuildExitCode   = $null
+                        pathEnrichment    = $script:PathEnrichment
                     }
                     resolvedPaths    = [ordered]@{
                         GeneXusDir       = $resolvedGeneXusDir
@@ -1245,6 +1285,7 @@ try {
                         ReorgDetected     = $false
                         TimedOut          = $false
                         MsBuildExitCode   = $null
+                        pathEnrichment    = $script:PathEnrichment
                     }
                     resolvedPaths    = [ordered]@{
                         GeneXusDir       = $resolvedGeneXusDir
@@ -1335,19 +1376,27 @@ try {
 
     # Detecta falha de SetActiveVersion (versão informada não existe na KB)
     $setVersionFailed = [bool]($stdOutText -match 'Set Active Version falhou')
+    $setEnvironmentFailed = [bool]($stdOutText -match 'Set Active Environment falhou')
 
     $activeVersionOutput     = Get-RegexValue -Text $stdOutText -Pattern "The active version is '([^']+)'"
     $activeEnvironmentOutput = Get-RegexValue -Text $stdOutText -Pattern "The active environment is '([^']+)'"
+    $missingEnvironmentOutput = Get-RegexValue -Text $stdOutText -Pattern "Ambiente '([^']+)' n[aã]o existe"
 
     if ($setVersionFailed) {
         $actualVersion = if (-not [string]::IsNullOrWhiteSpace($activeVersionOutput)) { $activeVersionOutput } else { '(desconhecida)' }
         Add-BlockingReason -Reason ("SetActiveVersion falhou — a versao '{0}' nao existe nesta KB. A versao ativa no momento da abertura era '{1}'. Para usar a versao ativa, omita o parametro -VersionName." -f $VersionName, $actualVersion)
     }
 
+    if ($setEnvironmentFailed) {
+        $actualEnvironment = if (-not [string]::IsNullOrWhiteSpace($activeEnvironmentOutput)) { $activeEnvironmentOutput } else { '(desconhecido)' }
+        $requestedEnvironment = if (-not [string]::IsNullOrWhiteSpace($missingEnvironmentOutput)) { $missingEnvironmentOutput } else { $EnvironmentName }
+        Add-BlockingReason -Reason ("SetActiveEnvironment falhou — o Environment '{0}' nao existe nesta KB. O Environment ativo no momento da abertura era '{1}'. Para usar o Environment ativo, omita o parametro -EnvironmentName." -f $requestedEnvironment, $actualEnvironment)
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($VersionName) -and [string]::IsNullOrWhiteSpace($activeVersionOutput) -and -not $setVersionFailed) {
         Add-WarningMessage -Message 'Versao solicitada, mas o retorno de GetActiveVersion veio vazio.'
     }
-    if (-not [string]::IsNullOrWhiteSpace($EnvironmentName) -and [string]::IsNullOrWhiteSpace($activeEnvironmentOutput)) {
+    if (-not [string]::IsNullOrWhiteSpace($EnvironmentName) -and [string]::IsNullOrWhiteSpace($activeEnvironmentOutput) -and -not $setEnvironmentFailed) {
         Add-WarningMessage -Message 'Environment solicitado, mas o retorno de GetActiveEnvironment veio vazio.'
     }
 
@@ -1364,23 +1413,28 @@ try {
     # O GeneXus nao conta isso como erro: stdout reporta "0 avisos, 0 erros".
     # Evidencia empirica: FabricaBrasil18 e wsEducacaoSpTeste em 2026-05-10, sempre 3x,
     # mesma posicao, independente do conteudo da KB. Filtrar antes de classificar.
-    $stdErrFilteredNoise = [string]::Join("`n", ([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }))
+    $stdErrFilteredNoise = @([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }) -join "`n"
     $stdErrFiltered      = ($stdErrText -replace '(?m)^context \[anonymous\] \d+:\d+ attribute component isn''t defined\r?\n?', '').Trim()
 
-    # Ruido estrutural do dotnet publish em Program Files\GAM\Platforms\NetCore* — assinatura
-    # de tres criterios simultaneos: error MSB3491 + is denied/acesso negado + caminho da
-    # instalacao do GeneXus contendo \Library\GAM\Platforms\. Linhas que casam todos os
-    # criterios sao removidas de stdout antes de classificar e listadas em stdoutFilteredNoise.
-    # Linhas que casem apenas alguns criterios permanecem como diagnostico legitimo.
+    # Ruido estrutural do dotnet publish em Program Files\GAM\Platforms\NetCore*.
+    # Duas assinaturas independentes sao aceitas:
+    #   1. error MSB3491 + is denied/acesso negado + caminho da instalacao do GeneXus
+    #   2. NuGet.targets(...): error : + is denied/acesso negado + caminho da instalacao do GeneXus
+    # Em ambos os casos o caminho deve conter \Library\GAM\Platforms\. Linhas que casam
+    # uma assinatura completa sao removidas de stdout antes de classificar e listadas
+    # em stdoutFilteredNoise. Linhas que casem apenas alguns criterios permanecem como
+    # diagnostico legitimo.
     # Evidencia empirica: matriz 2x2 KB/Environment em 2026-05-12 (ver SKILL.md).
     $stdOutLines             = if ([string]::IsNullOrEmpty($stdOutText)) { @() } else { $stdOutText -split "`r?`n" }
     $stdOutNoiseLines        = @()
     $stdOutNonNoiseLines     = @()
     foreach ($line in $stdOutLines) {
-        $isGamNoise = ($line -match 'error MSB3491') -and
-                      (($line -match 'is denied') -or ($line -match 'acesso negado')) -and
-                      ($line -match '\\GeneXus\\') -and
-                      ($line -match '\\Library\\GAM\\Platforms\\')
+        $isGamAccessDenied = (($line -match 'is denied') -or ($line -match 'acesso negado')) -and
+                             ($line -match '\\GeneXus\\') -and
+                             ($line -match '\\Library\\GAM\\Platforms\\')
+        $isGamMsb3491Noise = ($line -match 'error MSB3491') -and $isGamAccessDenied
+        $isGamNuGetNoise   = ($line -match 'NuGet\.targets\(\d+,\d+\):\s*error\s*:') -and $isGamAccessDenied
+        $isGamNoise        = $isGamMsb3491Noise -or $isGamNuGetNoise
         if ($isGamNoise) { $stdOutNoiseLines += $line } else { $stdOutNonNoiseLines += $line }
     }
     $stdOutFilteredNoise = ($stdOutNoiseLines -join "`n")
@@ -1440,8 +1494,8 @@ try {
         }
     }
 
-    if ($buildStatus.ExitCode -ne 0) {
-        Add-BlockingReason -Reason ('Execucao MSBuild terminou com exitCode {0}. Status: {1}.' -f $msBuildExitCode, $buildStatus.Status)
+    if ($buildStatus.ExitCode -ne 0 -and $script:BlockingReasons.Count -eq 0) {
+        Add-BlockingReason -Reason 'MSBuild falhou sem causa acionável classificada; consulte executionEvidence e logs brutos nos artefatos.'
     }
 
     if ($buildStatus.Status -eq 'reorg necessaria detectada') {
@@ -1457,6 +1511,13 @@ try {
         status           = $buildStatus.Status
         summary          = $buildStatus.Summary
         exitCode         = $buildStatus.ExitCode
+        executionEvidence = [ordered]@{
+            msBuildExitCode = $msBuildExitCode
+            msBuildFailed = ($msBuildExitCode -ne 0)
+            wrapperExitCode = $buildStatus.ExitCode
+            StdOutPath = $stdOutPath
+            StdErrPath = $stdErrPath
+        }
         stage            = 'build-all'
         requestedContext = [ordered]@{
             VersionName                = $VersionName
@@ -1484,6 +1545,7 @@ try {
             ReorgDetected     = $reorgDetected
             TimedOut          = $timedOut
             MsBuildExitCode   = $msBuildExitCode
+            pathEnrichment    = $script:PathEnrichment
         }
         resolvedPaths    = [ordered]@{
             GeneXusDir       = $resolvedGeneXusDir

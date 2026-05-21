@@ -9,6 +9,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$MetadataWrapperTestPath,
 
+    [string]$PowerShellRuntimeTestPath,
+
+    [string]$NamingWrapperPath,
+
     [string]$SourceSanityWrapperPath,
 
     [string]$PackageCollisionWrapperPath
@@ -80,6 +84,32 @@ function Emit-Line {
     '{0}: {1}' -f $Key, $Value
 }
 
+$scriptDir = Split-Path -Parent $PSCommandPath
+
+$powerShellRuntimeRaw = $null
+$powerShellRuntimeStatus = $null
+try {
+    if (-not $PowerShellRuntimeTestPath) {
+        throw "BLOCK: wrapper de runtime PowerShell nao informado"
+    }
+    $powerShellRuntimeRaw = Invoke-WrapperText -Path $PowerShellRuntimeTestPath
+    if ($powerShellRuntimeRaw -match '\bPOWERSHELL_RUNTIME_OK\b') {
+        $powerShellRuntimeStatus = 'OK'
+    } else {
+        $powerShellRuntimeStatus = 'BLOCK'
+    }
+} catch {
+    $powerShellRuntimeRaw = $_.Exception.Message.Trim()
+    $powerShellRuntimeStatus = 'BLOCK'
+}
+
+if ($powerShellRuntimeStatus -ne 'OK') {
+    Emit-Line -Key 'powershell/runtime' -Value $powerShellRuntimeStatus
+    Emit-Line -Key 'powershell/runtime.evidencia' -Value $(if ($powerShellRuntimeRaw) { $powerShellRuntimeRaw.Replace([Environment]::NewLine, ' | ') } else { '(sem saida)' })
+    Emit-Line -Key 'estado_operacional_sugerido' -Value 'runtime_powershell_bloqueado'
+    exit 1
+}
+
 $metadataPath = Join-Path $KbRoot 'kb-source-metadata.md'
 if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
     throw "BLOCK: kb-source-metadata.md nao encontrado: $metadataPath"
@@ -139,6 +169,44 @@ $syncEvidence = if ($lastMaterialization) {
     'last_xpz_materialization_run_at ausente'
 }
 
+$namingRaw = $null
+$namingStatus = 'INDETERMINADO'
+if ($lastMaterialization) {
+    try {
+        if (-not $NamingWrapperPath) {
+            $defaultNamingScriptPath = Join-Path $scriptDir 'Test-XpzObjetosDaKbNaming.ps1'
+            if (Test-Path -LiteralPath $defaultNamingScriptPath -PathType Leaf) {
+                $namingOutput = & $defaultNamingScriptPath -ParallelKbRoot $KbRoot -AsJson 2>&1
+            } else {
+                throw "BLOCK: wrapper de naming nao informado"
+            }
+        } else {
+            $namingOutput = & $NamingWrapperPath -AsJson 2>&1
+        }
+
+        $namingExitCode = $LASTEXITCODE
+        $namingRaw = (($namingOutput | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine).Trim()
+        $namingData = $namingRaw | ConvertFrom-Json
+        $indetermined = @($namingData.all | Where-Object { $_.StatusNaming -in @('INDETERMINADO', 'TIPO_DESCONHECIDO') })
+        if ($namingData.status -eq 'NAMING_DIVERGENT' -or $namingExitCode -eq 1) {
+            $namingStatus = 'DIVERGENT'
+        } elseif ($namingData.status -eq 'NAMING_INDETERMINADO' -or $indetermined.Count -gt 0) {
+            $namingStatus = 'INDETERMINADO'
+        } elseif ($namingData.status -eq 'NAMING_OK' -and $namingExitCode -eq 0) {
+            $namingStatus = 'OK'
+        } else {
+            $namingStatus = 'INDETERMINADO'
+        }
+        $divergentList = @($namingData.divergent) -join ','
+        $namingRaw = "status=$($namingData.status); divergent=$divergentList; total=$(@($namingData.all).Count)"
+    } catch {
+        $namingRaw = $_.Exception.Message.Trim()
+        $namingStatus = 'INDETERMINADO'
+    }
+} else {
+    $namingRaw = 'last_xpz_materialization_run_at ausente; naming nao auditado'
+}
+
 $packagesDir = Join-Path $KbRoot 'PacotesGeradosParaImportacaoNaKbNoGenexus'
 $packageDirExists = Test-Path -LiteralPath $packagesDir -PathType Container
 $hasSourceSanityWrapper = $SourceSanityWrapperPath -and (Test-Path -LiteralPath $SourceSanityWrapperPath -PathType Leaf)
@@ -160,7 +228,6 @@ $packageEvidenceParts += ('source_sanity_wrapper={0}' -f $(if ($hasSourceSanityW
 $packageEvidenceParts += ('package_collision_wrapper={0}' -f $(if ($hasPackageCollisionWrapper) { 'presente' } else { 'ausente' }))
 $packageEvidence = $packageEvidenceParts -join '; '
 
-$scriptDir = Split-Path -Parent $PSCommandPath
 $inventoryScriptPath = Join-Path $scriptDir 'Test-XpzWrapperInventory.ps1'
 $examplesPath = Join-Path (Split-Path -Parent $scriptDir) 'xpz-kb-parallel-setup\examples'
 $inventoryStatus = 'INVENTORY_UNKNOWN'
@@ -176,19 +243,27 @@ if (Test-Path -LiteralPath $inventoryScriptPath -PathType Leaf) {
     $inventoryStatus = 'INVENTORY_UNKNOWN: motor Test-XpzWrapperInventory.ps1 ausente'
 }
 
-$hasInventoryGaps = $inventoryStatus -match '\bINVENTORY_GAPS\b'
+$hasInventoryMethodologyPendencies = $inventoryStatus -match '\b(INVENTORY_GAPS|INVENTORY_SHORT_NAMING|INVENTORY_CUSTOMIZED)\b'
+$hasMetadataWrapperPendencies = $metadataWrapperStatus -ne 'OK'
 
 $suggestedState = switch ($true) {
+    ($powerShellRuntimeStatus -ne 'OK') { 'runtime_powershell_bloqueado'; break }
     ($syncStatus -eq 'PENDENTE') { 'pronto_para_primeira_materializacao'; break }
-    ($hasInventoryGaps) { 'atualizacao_metodologica_pendente'; break }
+    ($namingStatus -eq 'DIVERGENT') { 'naming_objetos_da_kb_pendente'; break }
+    ($hasMetadataWrapperPendencies) { 'atualizacao_metodologica_pendente'; break }
+    ($hasInventoryMethodologyPendencies) { 'atualizacao_metodologica_pendente'; break }
     ($syncStatus -eq 'OK' -and $gateStatus -eq 'OK' -and $inventorySemanticStatus -eq 'OK' -and $packageAuditStatus -eq 'OK') { 'materializado_e_indice_validado'; break }
     ($syncStatus -eq 'OK' -and $gateStatus -eq 'OK' -and $inventorySemanticStatus -eq 'OK' -and $packageAuditStatus -eq 'NAO_ADOTADO') { 'materializado_e_indice_validado'; break }
     ($syncStatus -eq 'OK' -and $gateStatus -eq 'OK' -and $inventorySemanticStatus -eq 'OK' -and $packageAuditStatus -eq 'PENDENTE') { 'auditoria_de_empacotamento_pendente'; break }
     default { 'wrappers_atualizados' }
 }
 
+Emit-Line -Key 'powershell/runtime' -Value $powerShellRuntimeStatus
+Emit-Line -Key 'powershell/runtime.evidencia' -Value $(if ($powerShellRuntimeRaw) { $powerShellRuntimeRaw.Replace([Environment]::NewLine, ' | ') } else { '(sem saida)' })
 Emit-Line -Key 'sync/materializacao' -Value $syncStatus
 Emit-Line -Key 'sync/materializacao.evidencia' -Value $syncEvidence
+Emit-Line -Key 'naming/objetos-da-kb' -Value $namingStatus
+Emit-Line -Key 'naming/objetos-da-kb.evidencia' -Value $(if ($namingRaw) { $namingRaw.Replace([Environment]::NewLine, ' | ') } else { '(sem saida)' })
 Emit-Line -Key 'indice/gate' -Value $gateStatus
 Emit-Line -Key 'indice/gate.evidencia' -Value $(if ($gateRaw) { $gateRaw.Replace([Environment]::NewLine, ' | ') } else { '(sem saida)' })
 Emit-Line -Key 'indice/semantica' -Value $inventorySemanticStatus
@@ -197,9 +272,13 @@ Emit-Line -Key 'metadata wrapper' -Value $metadataWrapperStatus
 Emit-Line -Key 'metadata wrapper.evidencia' -Value $(if ($metadataWrapperRaw) { $metadataWrapperRaw.Replace([Environment]::NewLine, ' | ') } else { '(sem saida)' })
 Emit-Line -Key 'empacotamento local' -Value $packageAuditStatus
 Emit-Line -Key 'empacotamento local.evidencia' -Value $packageEvidence
-if ($inventoryStatus -match '^(INVENTORY_SHORT_NAMING:[^|]+)\|\s*(INVENTORY_GAPS:.+)$') {
-    Emit-Line -Key 'wrappers/inventario' -Value $Matches[1].Trim()
-    Emit-Line -Key 'wrappers/inventario' -Value $Matches[2].Trim()
+if ($inventoryStatus -match '\|') {
+    foreach ($inventoryPart in @($inventoryStatus -split '\|')) {
+        $trimmedInventoryPart = $inventoryPart.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($trimmedInventoryPart)) {
+            Emit-Line -Key 'wrappers/inventario' -Value $trimmedInventoryPart
+        }
+    }
 } else {
     Emit-Line -Key 'wrappers/inventario' -Value $inventoryStatus
 }

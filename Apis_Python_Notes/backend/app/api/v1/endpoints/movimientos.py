@@ -19,3 +19,17 @@ def read_movimientos_by_caja(caja_id: date, db: Session = Depends(get_db)) -> An
 @router.post("/", response_model=MovimientoCajaRead)
 def create_movimiento(*, db: Session = Depends(get_db), obj_in: MovimientoCajaCreate) -> Any:
     return crud_movimiento.create(db, obj_in=obj_in)
+
+@router.put("/{id}", response_model=MovimientoCajaRead)
+def update_movimiento(*, db: Session = Depends(get_db), id: int, obj_in: MovimientoCajaUpdate) -> Any:
+    movimiento = crud_movimiento.get(db=db, id=id)
+    if not movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+    return crud_movimiento.update(db=db, db_obj=movimiento, obj_in=obj_in)
+
+@router.delete("/{id}", response_model=MovimientoCajaRead)
+def delete_movimiento(*, db: Session = Depends(get_db), id: int) -> Any:
+    movimiento = crud_movimiento.get(db=db, id=id)
+    if not movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+    return crud_movimiento.remove(db=db, id=id)

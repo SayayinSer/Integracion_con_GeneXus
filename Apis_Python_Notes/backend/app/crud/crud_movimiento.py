@@ -25,6 +25,46 @@ class CRUDMovimiento(CRUDBase[MovimientoCaja, MovimientoCajaCreate, MovimientoCa
             
         return db_obj
 
+    def update(self, db: Session, *, db_obj: MovimientoCaja, obj_in: MovimientoCajaUpdate) -> MovimientoCaja:
+        # Revert the old movement
+        caja = db.get(Caja, db_obj.CajaId)
+        if caja:
+            if db_obj.MovimientoCajaTipo == 'I':
+                caja.CajaTotalIngresos -= db_obj.MovimientoCajaImporte
+            elif db_obj.MovimientoCajaTipo == 'E':
+                caja.CajaTotalEgresos -= db_obj.MovimientoCajaImporte
+        
+        db_obj = super().update(db, db_obj=db_obj, obj_in=obj_in)
+        
+        # Apply the new movement
+        if caja:
+            if db_obj.MovimientoCajaTipo == 'I':
+                caja.CajaTotalIngresos += db_obj.MovimientoCajaImporte
+            elif db_obj.MovimientoCajaTipo == 'E':
+                caja.CajaTotalEgresos += db_obj.MovimientoCajaImporte
+            caja.CajaSaldoActual = caja.CajaSaldoInicial + caja.CajaTotalIngresos - caja.CajaTotalEgresos
+            db.add(caja)
+            db.commit()
+        return db_obj
+
+    def remove(self, db: Session, *, id: int) -> MovimientoCaja:
+        obj = db.get(self.model, id)
+        if not obj:
+            return None
+            
+        caja = db.get(Caja, obj.CajaId)
+        if caja:
+            if obj.MovimientoCajaTipo == 'I':
+                caja.CajaTotalIngresos -= obj.MovimientoCajaImporte
+            elif obj.MovimientoCajaTipo == 'E':
+                caja.CajaTotalEgresos -= obj.MovimientoCajaImporte
+            caja.CajaSaldoActual = caja.CajaSaldoInicial + caja.CajaTotalIngresos - caja.CajaTotalEgresos
+            db.add(caja)
+            
+        db.delete(obj)
+        db.commit()
+        return obj
+
     def get_by_caja(self, db: Session, *, caja_id: date) -> List[MovimientoCaja]:
         statement = select(MovimientoCaja).where(MovimientoCaja.CajaId == caja_id).order_by(MovimientoCaja.MovimientoCajaId.desc())
         return db.exec(statement).all()

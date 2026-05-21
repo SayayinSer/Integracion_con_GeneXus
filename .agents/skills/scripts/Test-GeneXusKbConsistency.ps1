@@ -277,6 +277,28 @@ function Split-NonEmptyLines {
     return ,$result
 }
 
+function New-ExecutionEvidence {
+    param(
+        [object]$MsBuildExitCode,
+        [int]$WrapperExitCode,
+        [string]$StdOutPath,
+        [string]$StdErrPath
+    )
+
+    $msBuildFailed = $null
+    if ($null -ne $MsBuildExitCode) {
+        $msBuildFailed = ([int]$MsBuildExitCode -ne 0)
+    }
+
+    return [ordered]@{
+        msBuildExitCode = $MsBuildExitCode
+        msBuildFailed   = $msBuildFailed
+        wrapperExitCode = $WrapperExitCode
+        StdOutPath      = $StdOutPath
+        StdErrPath      = $StdErrPath
+    }
+}
+
 function Get-StepSummaries {
     param([string]$Text)
     if ([string]::IsNullOrWhiteSpace($Text)) { return @() }
@@ -324,7 +346,7 @@ function Build-ConsistencyResult {
 }
 
 function Resolve-ScriptExitCode {
-    param([int]$MsBuildExitCode, [ordered]$ConsistencyResult)
+    param([int]$MsBuildExitCode, [System.Collections.Specialized.OrderedDictionary]$ConsistencyResult)
 
     if ($MsBuildExitCode -ne 0) {
         if ($ConsistencyResult.kbOpenFailed) { return 21 }
@@ -335,7 +357,7 @@ function Resolve-ScriptExitCode {
 }
 
 function Resolve-StatusLabel {
-    param([int]$ScriptExitCode, [ordered]$ConsistencyResult)
+    param([int]$ScriptExitCode, [System.Collections.Specialized.OrderedDictionary]$ConsistencyResult)
 
     switch ($ScriptExitCode) {
         0  { return 'sucesso operacional' }
@@ -347,7 +369,7 @@ function Resolve-StatusLabel {
 }
 
 function Resolve-SummaryText {
-    param([int]$ScriptExitCode, [ordered]$ConsistencyResult, [bool]$FixMode)
+    param([int]$ScriptExitCode, [System.Collections.Specialized.OrderedDictionary]$ConsistencyResult, [bool]$FixMode)
 
     $fixSuffix = if ($FixMode) { ' (Fix=true)' } else { '' }
     switch ($ScriptExitCode) {
@@ -420,7 +442,12 @@ if ($fixMode) {
                 StdErrPath      = $null
                 ExecutionLogPath = $resolvedLogPath
             }
-            msbuildExitCode = $null
+            executionEvidence = New-ExecutionEvidence `
+                -MsBuildExitCode $null `
+                -WrapperExitCode 30 `
+                -StdOutPath $null `
+                -StdErrPath $null
+            msBuildExitCode = $null
             stderrContent        = @()
             stderrFilteredNoise  = @()
             blockingReasons = @('Confirmação de Fix="true" negada pelo usuário.')
@@ -494,7 +521,12 @@ try {
                 StdErrPath       = $null
                 ExecutionLogPath = $resolvedLogPath
             }
-            msbuildExitCode = $null
+            executionEvidence = New-ExecutionEvidence `
+                -MsBuildExitCode $null `
+                -WrapperExitCode $probeStage.ExitCode `
+                -StdOutPath $null `
+                -StdErrPath $null
+            msBuildExitCode = $null
             stderrContent        = @()
             stderrFilteredNoise  = @()
             blockingReasons = @($probeDiag.blockingReasons + $script:BlockingReasons)
@@ -534,7 +566,7 @@ try {
 
     $stdOutText = Read-TextFileSafe -PathValue $stdOutPath
     $stdErrText = Read-TextFileSafe -PathValue $stdErrPath
-    $stdErrNoise    = [string]::Join("`n", ([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }))
+    $stdErrNoise    = @([regex]::Matches($stdErrText, '(?m)context \[anonymous\] \d+:\d+ attribute component isn''t defined') | ForEach-Object { $_.Value }) -join "`n"
     $stdErrFiltered = ($stdErrText -replace '(?m)^context \[anonymous\] \d+:\d+ attribute component isn''t defined\r?\n?', '').Trim()
 
     $consistencyResult = Build-ConsistencyResult -StdOutText $stdOutText -MsBuildExitCode $msBuildExitCode
@@ -583,7 +615,12 @@ try {
             StdErrPath       = $stdErrPath
             ExecutionLogPath = $resolvedLogPath
         }
-        msbuildExitCode = $msBuildExitCode
+        executionEvidence = New-ExecutionEvidence `
+            -MsBuildExitCode $msBuildExitCode `
+            -WrapperExitCode $scriptExitCode `
+            -StdOutPath $stdOutPath `
+            -StdErrPath $stdErrPath
+        msBuildExitCode = $msBuildExitCode
         stderrContent        = Split-NonEmptyLines -Text $stdErrFiltered
         stderrFilteredNoise  = Split-NonEmptyLines -Text $stdErrNoise
         blockingReasons = @($probeStage.Diagnostic.blockingReasons + $script:BlockingReasons)
@@ -629,7 +666,12 @@ catch {
             StdErrPath       = $null
             ExecutionLogPath = $resolvedLogPath
         }
-        msbuildExitCode = $null
+        executionEvidence = New-ExecutionEvidence `
+            -MsBuildExitCode $null `
+            -WrapperExitCode 90 `
+            -StdOutPath $null `
+            -StdErrPath $null
+        msBuildExitCode = $null
         stderrContent        = @()
         stderrFilteredNoise  = @()
         blockingReasons = @($_.Exception.Message)

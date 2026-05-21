@@ -74,6 +74,7 @@ Tipos que geram arquivo XML próprio no acervo. Containers de organização est�
 | `Panel` | `d82625fd-5892-40b0-99c9-5c8559c197fc` | Panel para dispositivos móveis (SmartDevices) | `Panel/` |
 | `PatternSettings` | `83476c1e-fa72-4229-9930-f51b954fca2d` | Configuração de padrão aplicado | `PatternSettings/` |
 | `Procedure` | `84a12160-f59b-4ad7-a683-ea4481ac23e9` | Procedure (código GeneXus) | `Procedure/` |
+| `Query` | `926a06b9-3417-4ab4-9f8c-09c2f626bb1c` | Query object GeneXus (`QueryElement`, filtros, parâmetros, chart/card settings) | `Query/` |
 | `SDT` | `447527b5-9210-4523-898b-5dccb17be60a` | Structured Data Type | `SDT/` |
 | `Stencil` | `624a8b31-36f0-4292-adba-2d270d1e3537` | Stencil de pattern | `Stencil/` |
 | `SubTypeGroup` | `87313f43-5eb2-41d7-9b8c-e8d9f5bf9588` | Grupo de subtipos de domínio | `SubTypeGroup/` |
@@ -84,7 +85,12 @@ Tipos que geram arquivo XML próprio no acervo. Containers de organização est�
 | `Transaction` | `1db606f2-af09-4cf9-a3b5-b481519d28f6` | Transação (formulário + modelo de dados) | `Transaction/` |
 | `UserControl` | `562f4793-aabe-449f-8821-fc77e550698e` | User Control customizado | `UserControl/` |
 | `WebPanel` | `c9584656-94b6-4ccd-890f-332d11fc2c25` | Tela web (eventos e layout) | `WebPanel/` |
+| `WorkPanel` | `198e8ea4-1d49-4c9c-8a9a-417024baa9d1` | Work Panel legado GeneXus (deprecated desde GeneXus 15); `Form Type=Windows` | `WorkPanel/` |
 | `WorkWithForWeb` | `78cecefe-be7d-4980-86ce-8d6e91fba04b` | Work With For Web (gerado por padrão) | `WorkWithForWeb/` |
+| `WorkWithPlusInstance` | `07135890-56fc-489b-b408-063722fa9f7d` | Instância do Pattern WorkWithPlus (third-party) aplicada a objeto GeneXus, tipicamente `WebPanel`; XML traz `Pattern="07135890-…"` | `WorkWithPlusInstance/` |
+| `WorkWithPlusTemplate` | `083f1b21-5715-45e1-8a8d-ceadef141e02` | Template do WorkWithPlus (`WWPTemplate_Type`, `WWPTemplate_TemplateXml`) | `WorkWithPlusTemplate/` |
+
+- `Evidência direta` (KB `NewWaySystem`, XPZ `NewWaySystem16052026FULL.xpz`, 2026-05-16): as linhas `Query`, `WorkPanel`, `WorkWithPlusInstance` e `WorkWithPlusTemplate` acima foram registradas a partir de bloqueio do `Sync-GeneXusXpzToXml.ps1` por GUIDs desconhecidos. Contagens observadas naquele XPZ: `WorkWithPlusInstance` = 420 (ex.: `WorkWithPlusHome`, `WorkWithPlusGAMApplicationEntry`); `WorkWithPlusTemplate` = 67 (ex.: `ListNoBaseTable`, `Dashboard1`, `CardWithMainImage`); `Query` = 31 (ex.: `QVendaPeriodo`, `QFaturamentoPeriodo`); `WorkPanel` = 1 (`ImpressaoEtiqueta`). As contagens do panorama no início deste documento referem-se ao acervo FabricaBrasil e não foram refeitas.
 
 ## Containers de organização da KB
 

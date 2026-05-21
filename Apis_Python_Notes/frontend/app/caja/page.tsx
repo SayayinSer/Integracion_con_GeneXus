@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchData, postData } from "../lib/api";
-import { Wallet, ArrowUpCircle, ArrowDownCircle, History, PlusCircle } from "lucide-react";
+import { fetchData, postData, deleteData } from "../lib/api";
+import { Wallet, ArrowUpCircle, ArrowDownCircle, History, PlusCircle, Trash2 } from "lucide-react";
 
 export default function CajaPage() {
   const [cajas, setCajas] = useState<any[]>([]);
@@ -28,6 +28,10 @@ export default function CajaPage() {
       if (data.length > 0 && !selectedCaja) {
         setSelectedCaja(data[0]);
         loadMovements(data[0].CajaId);
+      } else if (selectedCaja) {
+        // Update selected caja if exists
+        const updated = data.find((c: any) => c.CajaId === selectedCaja.CajaId);
+        if (updated) setSelectedCaja(updated);
       }
     } catch (e) {
       console.error(e);
@@ -60,108 +64,107 @@ export default function CajaPage() {
     } catch (e: any) { alert(e.message); }
   }
 
+  async function handleDeleteMovement(id: number) {
+    if (!confirm("¿Eliminar este movimiento y recalcular saldos?")) return;
+    try {
+      await deleteData(`/movimientos/${id}`);
+      loadCajas();
+      loadMovements(selectedCaja.CajaId);
+    } catch (e: any) { alert(e.message); }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className="flex flex-col gap-8 max-w-7xl mx-auto pb-10">
+      <header className="flex justify-between items-start">
         <div>
-          <h1 style={{ color: 'var(--primary)', fontSize: '2.5rem', fontWeight: 800 }}>Caja Diaria</h1>
-          <p className="text-muted">Control financiero y estados de cuenta.</p>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Caja Diaria</h1>
+          <p className="text-slate-500 mt-1">Control financiero y estados de cuenta.</p>
         </div>
         
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          <div className="card glass" style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', fontWeight: 'bold' }}>SALDO TOTAL</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
+        <div className="flex gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-3 text-center min-w-[150px]">
+            <div className="text-[10px] text-slate-400 font-bold tracking-wider mb-1">SALDO TOTAL</div>
+            <div className="text-2xl font-bold text-slate-800">
               ${cajas.reduce((acc, c) => acc + Number(c.CajaSaldoActual), 0).toLocaleString()}
             </div>
           </div>
-          <div className="card glass" style={{ padding: '0.75rem 1.5rem', textAlign: 'center', borderBottom: '2px solid #22c55e' }}>
-            <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 'bold' }}>TOTAL INGRESOS</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-3 text-center min-w-[150px] border-b-4 border-b-emerald-500">
+            <div className="text-[10px] text-emerald-500 font-bold tracking-wider mb-1">TOTAL INGRESOS</div>
+            <div className="text-xl font-bold text-slate-700">
               ${cajas.reduce((acc, c) => acc + Number(c.CajaTotalIngresos), 0).toLocaleString()}
             </div>
           </div>
-          <div className="card glass" style={{ padding: '0.75rem 1.5rem', textAlign: 'center', borderBottom: '2px solid #ef4444' }}>
-            <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>TOTAL EGRESOS</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-3 text-center min-w-[150px] border-b-4 border-b-rose-500">
+            <div className="text-[10px] text-rose-500 font-bold tracking-wider mb-1">TOTAL EGRESOS</div>
+            <div className="text-xl font-bold text-slate-700">
               ${cajas.reduce((acc, c) => acc + Number(c.CajaTotalEgresos), 0).toLocaleString()}
             </div>
           </div>
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cajas.map(caja => (
           <div 
             key={caja.CajaId} 
-            className={`card glass ${selectedCaja?.CajaId === caja.CajaId ? 'active-caja' : ''}`} 
-            style={{ 
-              padding: '1.5rem', 
-              cursor: 'pointer',
-              border: selectedCaja?.CajaId === caja.CajaId ? '2px solid var(--primary)' : '1px solid var(--border)'
-            }}
+            className={`bg-white rounded-2xl p-6 cursor-pointer transition-all ${selectedCaja?.CajaId === caja.CajaId ? 'ring-2 ring-sky-500 shadow-md scale-[1.02]' : 'border border-slate-200 shadow-sm hover:shadow-md'}`}
             onClick={() => {
               setSelectedCaja(caja);
               loadMovements(caja.CajaId);
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Wallet className="text-primary" size={24} />
-                <h3 style={{ margin: 0 }}>{caja.CajaDescripcion}</h3>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center">
+                  <Wallet size={20} />
+                </div>
+                <h3 className="font-bold text-slate-800">{caja.CajaDescripcion}</h3>
               </div>
-              <span style={{ 
-                padding: '0.25rem 0.75rem', 
-                borderRadius: '20px', 
-                fontSize: '0.75rem', 
-                backgroundColor: caja.CajaEstado === 'A' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                color: caja.CajaEstado === 'A' ? '#22c55e' : '#ef4444'
-              }}>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${caja.CajaEstado === 'A' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                 {caja.CajaEstado === 'A' ? 'ACTIVA' : 'CERRADA'}
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
-              <div className="card" style={{ padding: '1rem', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <label style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)' }}>SALDO ACTUAL</label>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <label className="text-[10px] font-bold text-slate-400">SALDO ACTUAL</label>
+                <div className="text-xl font-bold text-sky-600">
                   ${Number(caja.CajaSaldoActual).toLocaleString()}
                 </div>
               </div>
-              <div className="card" style={{ padding: '1rem', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <label style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)' }}>INICIAL</label>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <label className="text-[10px] font-bold text-slate-400">INICIAL</label>
+                <div className="text-xl font-bold text-slate-700">
                   ${Number(caja.CajaSaldoInicial).toLocaleString()}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+            <div className="flex gap-3 mt-6">
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowModal(true); setModalType('I'); setSelectedCaja(caja); }}
-                className="btn-primary" 
-                style={{ flex: 1, backgroundColor: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-sm shadow-emerald-500/20"
               >
                 <ArrowUpCircle size={18} /> Ingreso
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowModal(true); setModalType('E'); setSelectedCaja(caja); }}
-                className="btn-primary" 
-                style={{ flex: 1, backgroundColor: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}
+                className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-sm shadow-rose-500/20"
               >
                 <ArrowDownCircle size={18} /> Egreso
               </button>
             </div>
           </div>
         ))}
+
         {cajas.length === 0 && !loading && (
-           <div className="card" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1 / -1' }}>
-              <p className="text-muted">No hay cajas configuradas en el sistema.</p>
+           <div className="col-span-full bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+              <p className="text-slate-500 mb-6">No hay cajas configuradas en el sistema.</p>
               <button 
                 onClick={async () => {
                   try {
                     await postData("/cajas/", {
-                      CajaId: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                      CajaId: new Date().toISOString().split('T')[0],
                       CajaDescripcion: `Caja ${new Date().toLocaleDateString()}`,
                       CajaSaldoInicial: 0,
                       CajaTotalIngresos: 0,
@@ -172,9 +175,9 @@ export default function CajaPage() {
                     loadCajas();
                   } catch (e: any) { alert(e.message); }
                 }}
-                className="btn-primary" 
-                style={{ marginTop: '1rem', alignSelf: 'center' }}
+                className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-xl font-medium shadow-sm shadow-sky-500/20 transition-all inline-flex items-center gap-2"
               >
+                <PlusCircle size={20} />
                 Abrir Caja del Día
               </button>
            </div>
@@ -182,42 +185,47 @@ export default function CajaPage() {
       </div>
 
       {selectedCaja && (
-        <section style={{ marginTop: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <History className="text-primary" size={24} />
-            <h2 style={{ margin: 0 }}>Historial de Movimientos: {selectedCaja.CajaDescripcion}</h2>
+        <section className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex items-center gap-3">
+            <History className="text-slate-400" size={24} />
+            <h2 className="text-lg font-bold text-slate-800 m-0">Historial de Movimientos: {selectedCaja.CajaDescripcion}</h2>
           </div>
 
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '1rem' }}>Descripción</th>
-                  <th style={{ padding: '1rem' }}>Tipo</th>
-                  <th style={{ padding: '1rem', textAlign: 'right' }}>Importe</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 text-xs text-slate-500 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="p-4 uppercase tracking-wider">Descripción</th>
+                  <th className="p-4 uppercase tracking-wider">Tipo</th>
+                  <th className="p-4 text-right uppercase tracking-wider">Importe</th>
+                  <th className="p-4 text-right uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {movements.map(m => (
-                  <tr key={m.MovimientoCajaId} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '1rem' }}>{m.MovimientoCajaDescripcion}</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ 
-                        color: m.MovimientoCajaTipo === 'I' ? '#22c55e' : '#ef4444',
-                        fontWeight: 600,
-                        fontSize: '0.8rem'
-                      }}>
+                  <tr key={m.MovimientoCajaId} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="p-4 text-slate-700 font-medium">{m.MovimientoCajaDescripcion}</td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${m.MovimientoCajaTipo === 'I' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
                         {m.MovimientoCajaTipo === 'I' ? 'INGRESO' : 'EGRESO'}
                       </span>
                     </td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700 }}>
+                    <td className={`p-4 text-right font-bold ${m.MovimientoCajaTipo === 'I' ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {m.MovimientoCajaTipo === 'I' ? '+' : '-'} ${Number(m.MovimientoCajaImporte).toLocaleString()}
+                    </td>
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={() => handleDeleteMovement(m.MovimientoCajaId)} 
+                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {movements.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                    <td colSpan={4} className="p-8 text-center text-slate-400">
                       No hay movimientos registrados.
                     </td>
                   </tr>
@@ -228,44 +236,48 @@ export default function CajaPage() {
         </section>
       )}
 
-      {/* Modal */}
+      {/* Modal Tailwind */}
       {showModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div className="card glass" style={{ width: '400px', padding: '2rem', border: `1px solid ${modalType === 'I' ? '#22c55e' : '#ef4444'}` }}>
-            <h2 style={{ marginBottom: '1.5rem', color: modalType === 'I' ? '#22c55e' : '#ef4444' }}>
-              Nuevo {modalType === 'I' ? 'Ingreso' : 'Egreso'}
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className={`p-6 border-b ${modalType === 'I' ? 'border-emerald-100 bg-emerald-50/50' : 'border-rose-100 bg-rose-50/50'}`}>
+              <h2 className={`text-xl font-bold m-0 ${modalType === 'I' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                Nuevo {modalType === 'I' ? 'Ingreso' : 'Egreso'}
+              </h2>
+            </div>
+            
+            <div className="p-6 space-y-5">
               <div>
-                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Descripción</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descripción</label>
                 <input 
                   type="text" 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ej: Pago de servicio"
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'white' }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all text-slate-700"
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Importe</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Importe ($)</label>
                 <input 
                   type="number" 
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'white' }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all text-slate-700 font-bold"
                 />
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button onClick={() => setShowModal(false)} className="btn-secondary" style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', background: 'var(--secondary)', color: 'white', border: 'none', cursor: 'pointer' }}>Cancelar</button>
+              
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setShowModal(false)} 
+                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                >
+                  Cancelar
+                </button>
                 <button 
                   onClick={handleAddMovement} 
-                  className="btn-primary" 
-                  style={{ flex: 1, backgroundColor: modalType === 'I' ? '#22c55e' : '#ef4444' }}
+                  className={`flex-1 px-4 py-3 rounded-xl font-medium text-white transition-colors shadow-sm ${modalType === 'I' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'}`}
                 >
                   Registrar
                 </button>

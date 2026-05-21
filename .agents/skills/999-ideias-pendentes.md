@@ -1,5 +1,9 @@
 # Ideias Pendentes
 
+## Política de retirada de pendências
+
+Quando uma entrada deste arquivo for resolvida, implementada ou incorporada ao contrato metodológico vigente, ela deve ser movida para o arquivo mensal correspondente em `historico/IdeiasImplementadas_YYYYMM.md` antes de ser retirada daqui. Este arquivo deve manter apenas ideias ainda pendentes ou subfrentes residuais explicitamente abertas.
+
 ## Gate `lastUpdate` futuro em `Test-GeneXusImportFileEnvelope.ps1`
 
 **Importância:** média
@@ -34,84 +38,6 @@ Cada entrada usa dois campos curtos logo abaixo do titulo:
 - **Maturidade** — quão pronta a ideia está para virar frente de implementação. Valores: `ideia` (direção identificada, decisões de design em aberto), `pesquisa feita` (direção técnica resolvida, falta gatilho de caso real), `pronta para implementar` (caso concreto identificado, decisões fechadas, falta executar).
 
 Entradas legadas sem avaliação carregam `FALTA AVALIAR` em ambos os campos até que sejam revistas em sessão dedicada.
-
-## Corrigir pos-processamento resiliente em `Invoke-GeneXusXpzImport.ps1`
-
-**Importância:** alta
-**Maturidade:** pronta para implementar
-
-**Origem:** import real em 2026-05-14 na KB FabricaBrasil18; evidência detalhada em `historico/base-geral/2026-05-14-import-wrapper-join-cssproperties.md`.
-
-### Problema concreto que motiva a ideia
-
-Durante import real bem-sucedido, o MSBuild registrou `Import Task Sucesso` e os 3
-marcadores `__IMPORTED_ITEM__=...`, mas o wrapper caiu depois disso com:
-
-```text
-Exception calling "Join" with "2" argument(s): "Value cannot be null. (Parameter 'values')"
-```
-
-A causa mecanica esta na linha 728 de `scripts/Invoke-GeneXusXpzImport.ps1`: quando
-`msbuild.stderr.log` vem vazio, o pipeline usado para montar `$stdErrNoise` produz
-`$null`, e `[string]::Join(...)` dispara `ArgumentNullException`.
-
-### Impacto
-
-O import ja tinha ocorrido, mas o `catch` global emitiu `exitCode=90`, classificou como
-`falha operacional`, perdeu `importedItems` e nao propagou os caminhos dos artefatos
-`msbuild.stdout.log`, `msbuild.stderr.log` e `import-real.msbuild`.
-
-Isso fere o contrato operacional da skill `xpz-msbuild-import-export`: falha interna
-no pos-processamento nao deve apagar a evidência ja coletada do MSBuild.
-
-### Direcao de implementacao
-
-- Hotfix minimo: forcar array em `$stdErrNoise`, usando `@(...)` antes de chamar
-  `[string]::Join(...)`.
-- Correcao robusta: envolver o bloco de pos-processamento pos-MSBuild em `try/catch`
-  interno e emitir diagnostico parcial com `postProcessingFailed=true`.
-- Preservar no diagnostico parcial: exit code real do MSBuild, caminhos de artefatos,
-  stdout/stderr bruto e `importedItems` extraidos do stdout quando existirem.
-
-### Criterio de aceite
-
-Uma importacao com `msbuild.stderr.log` vazio e stdout contendo `Import Task Sucesso`
-nao pode terminar como falha operacional opaca por erro de pos-processamento. Se o
-pos-processamento falhar, o JSON deve preservar as evidencias do MSBuild e indicar a
-falha secundaria de forma explicita.
-
-## Documentar aviso GeneXus de acesso negado a `CssProperties.json` durante import
-
-**Importância:** baixa
-**Maturidade:** pesquisa feita
-
-**Origem:** import real em 2026-05-14 na KB FabricaBrasil18; evidência detalhada em `historico/base-geral/2026-05-14-import-wrapper-join-cssproperties.md`.
-
-### Problema concreto que motiva a ideia
-
-Durante a importacao de `procCrudMsprod`, o stdout registrou:
-
-```text
-O acesso ao caminho 'C:\Program Files (x86)\GeneXus\GeneXus18\CssProperties.json' foi negado.
-```
-
-A mensagem apareceu entre `Importando Procedure 'procCrudMsprod' ...` e `Bem sucedido`.
-O `stderr` estava vazio e a task terminou com `Import Task Sucesso`.
-
-### Leitura operacional atual
-
-O arquivo `CssProperties.json` existe e nao tem atributo read-only, mas fica dentro de
-`C:\Program Files (x86)`, protegido por ACL/UAC para processos sem elevacao. A evidencia
-aponta para ruido informativo de ambiente GeneXus, nao para falha do pacote ou do import.
-
-### Direcao futura
-
-Registrar na documentacao operacional da skill `xpz-msbuild-import-export` que essa
-mensagem, quando vier apenas em stdout e cercada por `Bem sucedido`, nao deve ser
-classificada como falha de importacao.
-
-Nao elevar GeneXus/MSBuild automaticamente por causa dessa linha. Reclassificar apenas
-se houver caso em que a mensagem venha acompanhada de falha real de import ou build.
 
 ## LlamaIndex / LangChain + vector store como alternativa ao indice SQLite atual
 
@@ -194,43 +120,6 @@ Essa camada nao substituiria `xmlWellFormed`, `sourceSanityStatus` nem os gates 
 - O que exatamente conta como `official baseline` em cada fluxo: XML oficial atual em `ObjetosDaKbEmXml`, ultimo delta aceito, ou outro marco explicitamente documentado?
 - A comparacao deve nascer primeiro como regra metodologica de handoff/revisao, ou ja como evolucao automatizada do `Test-GeneXusSourceSanity.ps1`?
 - Como impedir que baseline ruim vire permissao implicita para aceitar piora nova?
-
-## Wrapper compartilhado para auditoria de naming de `ObjetosDaKbEmXml`
-
-**Importância:** FALTA AVALIAR
-**Maturidade:** FALTA AVALIAR
-
-**Origem:** avaliacao de sugestao de agente externo em 2026-05-01.
-
-### Problema concreto que motiva a ideia
-
-A verificacao de naming dos diretorios de container em `ObjetosDaKbEmXml` e executada hoje como procedimento narrado pelo agente seguindo o bloco `8.g2` da `xpz-kb-parallel-setup`. O fluxo esta bem especificado — cobre todos os diretorios sem excecao, exige leitura de pelo menos um XML por diretorio, mapeia o GUID de `Object/@type` para o nome canonico via catalogo e produz saida estruturada em tabela — mas depende de interpretacao local do agente a cada sessao.
-
-O risco pratico nao e de ambiguidade na regra, mas de variancia entre execucoes: agentes distintos podem diferir na forma de localizar o XML, nomear as colunas da tabela ou reportar a evidencia, mesmo seguindo a mesma secao da skill.
-
-### Ideia de melhoria
-
-Adicionar ao motor compartilhado um script `Test-KbNamingAudit.ps1` que:
-
-- receba como entrada o caminho de `ObjetosDaKbEmXml`
-- liste todos os subdiretorios presentes
-- leia pelo menos um XML por diretorio, extraia o elemento raiz ou `Object/@type`
-- mapeie o GUID para o nome canonico usando o mesmo catalogo ja consumido por `Build-KbIntelligenceIndex.py`
-- emita saida estruturada por diretorio com as colunas `Diretorio`, `Tipo real encontrado`, `Status` e, quando divergente, `Nome canonico esperado`
-- retorne `NAMING_OK` quando todos os diretorios estiverem conformes ou `NAMING_DIVERGENTE: <lista>` quando houver inversao
-
-O wrapper local de cada pasta paralela chamaria esse script e repassaria o resultado ao handoff, em vez de o agente executar o mapeamento inline.
-
-### O que justificaria implementar agora vs. aguardar
-
-O limiar de maturidade ainda nao foi atingido. O conjunto de tipos de container auditados e finito (Folder, Module, PackagedModule, Attribute) e o `8.g2.vii` ja tem criterio de parada curta bem definido. A implementacao faria sentido quando houver: (a) evidencia de handoffs superficiais recorrentes por variancia de execucao artesanal entre sessoes, ou (b) tres ou mais KBs paralelas ativas produzindo tabelas de naming inconsistentes.
-
-### Perguntas a responder antes de decidir
-
-- O catalogo de GUIDs em `01a-catalogo-e-padroes-empiricos.md` ja esta em formato consumivel por um script PowerShell, ou exigiria extracao adicional?
-- O script deve ficar no motor compartilhado (ao lado de `Build-KbIntelligenceIndex.py`) ou como wrapper exemplo desta skill, seguindo o padrao dos `*.example.ps1`?
-- A saida estruturada do script deve ser consumida diretamente pelo `Test-*KbSetupAudit.ps1` ou reportada separadamente no handoff?
-- Como manter sincronia entre o catalogo de GUIDs e o mapeamento interno do script sem duplicar a fonte autoritativa?
 
 ## Rename de `kb-source-metadata.md` para `kb-parallel-state.md`
 
@@ -788,6 +677,8 @@ degradação de performance pós-import que se beneficiaria da compactação.
 **Origem:** sugestão recebida de agente externo em 2026-05-10, verificada empiricamente na
 mesma sessão contra `GX_KB_wsEducacaoSpTeste`.
 
+**Status em 2026-05-20:** a subfrente conceitual de classificação e comunicação foi registrada em `historico/IdeiasImplementadas_202605.md`. Esta entrada permanece pendente apenas quanto à capacidade operacional de diagnóstico SQL somente leitura.
+
 ### Problema concreto que motiva a ideia
 
 As skills XPZ operam sobre XPZ/XML exportados, acervo `ObjetosDaKbEmXml` e índice derivado
@@ -932,15 +823,14 @@ Derivados da análise de três imprecisões introduzidas durante a investigaçã
 ### Frente de regras conceituais — encerrada em 2026-05-10
 
 A dimensão de **regras de classificação e comunicação** desta ideia foi tratada como frente
-separada e aplicada diretamente nas skills e na base compartilhada:
+separada, registrada em `historico/IdeiasImplementadas_202605.md` e aplicada diretamente nas skills e na base compartilhada:
 
 - `02-regras-operacionais-e-runtime.md` — nova seção "Limite do XPZ/XML frente a providers
   e extensoes GeneXus" com as oito regras operacionais conceituais
 - `xpz-reader/SKILL.md` — bullet de classificação de item antes de concluir ausência
 - `xpz-index-triage/SKILL.md` — bullet análogo para resultado negativo do índice
 
-O que permanece pendente nesta entrada é apenas a capacidade de **diagnóstico SQL somente
-leitura** no banco interno da KB, coberta pelo limiar abaixo.
+O que permanece pendente nesta entrada é apenas a capacidade operacional de **diagnóstico SQL somente leitura** no banco interno da KB, coberta pelo limiar abaixo.
 
 ### Limiar para implementar (diagnóstico SQL)
 
@@ -1216,40 +1106,47 @@ Camada de julgamento (regra textual em `xpz-builder`): consolidar os resultados 
 
 Implementar quando houver: (a) pelo menos um gate upstream (1.1 mojibake, 1.2 dependências ou 1.3 drift de tipagem) implementado e em uso real, gerando saída estruturada que sirva de conteúdo para uma das seções do manifesto; e (b) decisão editorial fechada sobre formato, posição, nomenclatura e política de versionamento Git.
 
-## Script de inventário de objetos em pacote importável (`import_file.xml` / `.xpz`)
+## Suporte direto a `.xpz` no inventário de pacote importável
 
 **Importância:** média
 **Maturidade:** ideia
 
 **Origem:** incidente operacional documentado em 2026-05-13 (export MSBuild com `-ObjectList` gerou `.xpz` com dependências e módulo de plataforma; import headless sem inventário completo do conteúdo real do pacote). A camada comportamental já foi incorporada em `xpz-msbuild-import-export`, `xpz-builder`, `10-base-operacional-msbuild-headless.md` e `08-guia-para-agente-gpt.md`; esta entrada cobre apenas **automação determinística** opcional.
 
+**Status em 2026-05-20:** a subfrente de inventário determinístico para `import_file.xml` foi movida para `historico/IdeiasImplementadas_202605.md`. Permanece pendente apenas o suporte direto a `.xpz` e decisões de integração que extrapolam o fluxo cotidiano com `import_file.xml`.
+
 **Filiação editorial:** complementa o **Manifesto semântico de pacote** (intenção e narrativa na fase de empacotamento em `xpz-builder`). O inventário por script foca no **conteúdo efetivo** do artefato logo antes do import MSBuild — especialmente quando o pacote veio de export, reempacotamento manual ou patch, onde o manifesto da frente de empacotamento pode não existir ou não bater com o zip.
 
 ### Problema concreto que motiva a ideia
 
-O gate `Test-GeneXusImportFileEnvelope.ps1` valida envelope (`ExportFile`, `KMW`, `Source`, GUIDs, etc.), mas **não** substitui a lista explícita de **todos** os objetos que seriam aplicados à KB. Hoje essa lista é obrigação **manual** do agente (ler `<Objects>`, expandir `.xpz` se necessário, confrontar com o delta declarado). Agentes que saltam o passo ou assumem “lista nominal do export = conteúdo do pacote” reintroduzem risco de importar extras (módulos de sistema, SDTs não alterados, dependências não pedidas) e de custo operacional alto (ex.: rebuild amplo), mesmo sem corrupção estrutural da KB.
+O gate `Test-GeneXusImportFileEnvelope.ps1` valida envelope (`ExportFile`, `KMW`, `Source`, GUIDs, etc.), mas **não** substitui a lista explícita de **todos** os objetos que seriam aplicados à KB. Para `import_file.xml`, a primitiva determinística já existe em `scripts/Get-GeneXusImportPackageObjectInventory.ps1`.
+
+O gap restante é `.xpz`: quando o pacote vem de export IDE/MSBuild ou envio a terceiros, o agente ainda precisa expandir o zip, localizar o XML interno correto e só então aplicar o inventário. Agentes que saltam esse passo ou assumem “lista nominal do export = conteúdo do pacote” reintroduzem risco de importar extras (módulos de sistema, SDTs não alterados, dependências não pedidas) e de custo operacional alto (ex.: rebuild amplo), mesmo sem corrupção estrutural da KB.
 
 ### Direção técnica proposta
 
-Script no motor compartilhado `scripts/` (nome provisório `Get-GeneXusImportPackageObjectInventory.ps1` ou extensão opcional de `Test-GeneXusImportFileEnvelope.ps1` com modo `-ListObjectsOnly` / `-AsJson`):
+Evoluir `scripts/Get-GeneXusImportPackageObjectInventory.ps1` para aceitar `.xpz` diretamente:
 
-- **Entrada:** caminho para `import_file.xml` **ou** `.xpz` (tratar como ZIP, localizar `ExportFile`/XML interno com o mesmo esquema).
-- **Saída estruturada (JSON):** lista de objetos com `type`, `name`, `guid` quando disponível; contagem total; flags heurísticas opcionais (ex.: candidato a módulo de plataforma pelo par `Module` + nome conhecido como `GeneXus`).
-- **Modo opcional de confronto:** parâmetro com caminho para ficheiro de “delta declarado” (lista `Tipo:Nome` ou JSON) — emitir `MATCH` / `EXTRA_OBJECTS` / `MISSING_FROM_PACKAGE` com código de saída não zero nos casos bloqueantes acordados com o utilizador.
+- detectar que `InputPath` é `.xpz`
+- abrir o pacote como ZIP sem extrair para local instável
+- localizar o `ExportFile`/XML interno real em pacotes GeneXus 18
+- abortar se houver zero ou mais de um candidato inequívoco
+- aplicar o mesmo contrato de saída já usado para `import_file.xml`
 - **Ordem na trilha:** após `Test-GeneXusImportFileEnvelope.ps1` com sucesso, **antes** de `Invoke-GeneXusXpzImport.ps1` (ou equivalente local).
 
 Integração futura em wrappers locais da pasta paralela: um único comando que encadeia envelope + inventário + import, com falha cedo quando houver extras não justificados.
 
 ### Decisões em aberto
 
-- Fundir com o gate de envelope num único script (duas fases internas) ou manter scripts separados para responsabilidade única e reutilização?
-- Contrato exato do ficheiro “delta declarado” (texto linha a linha vs JSON) e se o confronto é sempre obrigatório ou só com `-StrictDeltaPath`.
+- Suporte direto a `.xpz`: localizar o `ExportFile`/XML interno em ZIPs reais GeneXus 18 sem ampliar risco do fluxo cotidiano.
+- Contrato JSON para “delta declarado”, se surgir necessidade além do formato texto linha a linha `Tipo:Nome`.
 - Lista de nomes/GUIDs de módulos de plataforma: configurável por `.json` na pasta paralela vs hardcoded mínimo + expansão documental.
-- `.xpz` com estrutura interna não padronizada na amostra — validar contra exports reais GeneXus 18 já usados na trilha.
 
-### Limiar para implementar
+### Pendências restantes antes de implementar
 
-Implementar quando houver: (a) segunda ocorrência documentada de import headless com escopo “cirúrgico” que tenha levado extras não intencionais **apesar** da documentação nova; ou (b) pasta paralela que queira enforced chain no `.ps1` (sem depender só de disciplina do agente); ou (c) frente que precise de evidência em CI/revisão humana listando objetos do pacote automaticamente.
+- Testar estrutura interna de pelo menos alguns `.xpz` reais GeneXus 18 para fechar a regra de localização do XML interno.
+- Definir se o script deve extrair para `Temp/` auditável ou processar em memória.
+- Integração com evidência de CI/revisão humana pode ser adicionada quando uma frente pedir inventário automático de pacote como artefato de fechamento.
 
 ### Relação com outras entradas em 999
 
@@ -1488,3 +1385,500 @@ Antes de gravar gates, fazer experimento controlado:
   (`-AllowWideRebuild` cobre todas as flags amplas)?
 - Existe combinação dessas flags com `ForceRebuild=true` que faça sentido proteger
   diferentemente?
+
+## Síntese operacional pós-build — descoberta de URL/hosting da aplicação gerada
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** relato de agente em pasta paralela `C:\Dev\Test\Gx_wsEducacaoSpTeste` em 2026-05-17. Após build bem-sucedido, o agente precisou descobrir manualmente como abrir a aplicação gerada, com caminhos diferentes por generator.
+
+### Problema concreto que motiva a ideia
+
+Build bem-sucedido gera aplicação acessível, mas o caminho para abrir varia por generator/environment e não é exposto pela skill `xpz-msbuild-build`. Casos relatados:
+
+- **NETPostgreSQL / .NET Core**:
+  - web dir: `C:\KBs\wsEducacaoSpTeste\NETPostgreSQL155\web`
+  - hospedagem: `dotnet GxNetCoreStartup.dll` self-host
+  - URL: `http://127.0.0.1:50155`
+
+- **NETFrameworkSQLServer / .NET Framework**:
+  - web dir: `C:\KBs\wsEducacaoSpTeste\NETFrameworkSQLServer004\web`
+  - hospedagem: IIS
+  - virtual directory em `applicationHost.config`: `/wsEducacaoSpTesteNETFrameworkSQLServer`
+  - URL: `http://localhost/wsEducacaoSpTesteNETFrameworkSQLServer/wwescola.aspx`
+
+A informação existe no ambiente (estrutura de pastas da KB, `applicationHost.config` do IIS) mas o agente precisa reconstruí-la manualmente.
+
+### Direção de implementação
+
+Etapa complementar ao classificador principal de `xpz-msbuild-build`, **não parte dele**. Sugestão de wrapper novo: `scripts/Get-GeneXusRuntimeLaunchInfo.ps1`, retornando JSON com:
+
+- `activeEnvironment` — nome do environment ativo
+- `generatorType` — `dotnet-self-host` ou `iis` ou `unknown`
+- `webOutputDirectory` — caminho absoluto do diretório `web` gerado
+- `hostingStrategy` — string descritiva
+- `probableUrl` — URL provável (para self-host: porta do `appsettings.json`; para IIS: virtual directory + entrypoint padrão)
+- `entrypoints` — lista de entrypoints conhecidos no `web` (ex.: `developermenu.html`, `wplogin.aspx`, e qualquer objeto web identificado por triagem)
+
+### Escopo recomendado para primeira versão
+
+Cortar pelo caso mais simples primeiro: **só `dotnet self-host`**. IIS exige ler `applicationHost.config` (caminho pode variar, ACL pode bloquear leitura sem elevação) — superfície grande para uma primeira entrega. Adicionar IIS em segunda iteração, somente se houver caso concreto.
+
+### Decisões em aberto
+
+- Onde reside a porta canônica do self-host: `appsettings.json`, `web.config`, ou arquivo gerado pelo build?
+- O wrapper deve invocar o runtime para validar que a URL responde, ou só inferir? (Inferir é mais barato e não acopla a wrapper a estado do host.)
+- Integração com `Test-GeneXusRuntimeFreshness.ps1` (que verifica frescor do runtime, não descobre URL): coordenação ou independência?
+
+### Relacionado
+
+- `scripts/Test-GeneXusRuntimeFreshness.ps1` — verifica frescor, não cobre descoberta de URL.
+- Skill `xpz-msbuild-build` — classificador de build atual, foco no resultado da compilação, não no acesso à aplicação gerada.
+
+## Sinalização de snapshot paralelo defasado após import real
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** relato de agente em pasta paralela `C:\Dev\Test\Gx_wsEducacaoSpTeste` em 2026-05-17. Após importar `Domain DasNeves` via MSBuild na KB nativa `C:\KBs\wsEducacaoSpTeste`, a pasta paralela (`ObjetosDaKbEmXml/` e índice `KbIntelligence/`) permaneceu refletindo o último XPZ full materializado anterior à importação.
+
+### Problema concreto que motiva a ideia
+
+Import real bem-sucedido muda a KB nativa, mas:
+
+- `ObjetosDaKbEmXml/` na pasta paralela só reflete a mudança após novo export/sync/materialização
+- `KbIntelligence/` (índice SQLite) idem
+- Triagem por índice continua "cega" para o objeto recém-importado até nova materialização
+
+Isso não é erro do wrapper de import — é uma **lacuna de handoff** entre `xpz-msbuild-import-export` e `xpz-sync`/`xpz-doc-builder`. O risco é o usuário (ou outro agente em sessão seguinte) consultar o índice e concluir erroneamente que o objeto não existe.
+
+### Direção de implementação
+
+Ao concluir `Invoke-GeneXusXpzImport.ps1` com sucesso real (import efetivado), enriquecer o JSON de saída com campos de sinalização:
+
+- `kbNativeChanged: true`
+- `parallelSnapshotStale: true`
+- `importedItems: ["Domain:DasNeves", ...]` (já planejado pela ideia de pós-processamento resiliente)
+- `suggestedNextSyncScope: "importedItems"` (sugere escopo mínimo de re-sync, não sync total)
+- `parallelSnapshotPath` e `kbIntelligenceIndexPath` quando inferíveis do `kb-source-metadata.md`
+
+A skill **sinaliza**, não **automatiza**. O re-sync continua sendo responsabilidade explícita de `xpz-sync` invocado em frente separada. Acoplar import a sync aumentaria superfície e blast radius do wrapper de import.
+
+### Critério de aceite
+
+Após import real bem-sucedido na KB nativa, o JSON do wrapper precisa expor de forma máquina-legível que (a) houve mudança efetiva na KB nativa, (b) o snapshot paralelo desta pasta está defasado, (c) quais objetos foram importados. O agente seguinte deve conseguir tomar decisão de re-sync apenas lendo esse JSON, sem inspecionar manualmente a KB nativa.
+
+### Decisões em aberto
+
+- Onde fica a inferência de `parallelSnapshotPath`/`kbIntelligenceIndexPath`: dentro do wrapper de import (leitura de `kb-source-metadata.md`) ou em camada separada?
+- Comportamento quando o wrapper rodar **fora** de pasta paralela conhecida (caso de uso direto na KB nativa, sem snapshot paralelo): omitir os campos ou marcar `parallelSnapshotKnown: false`?
+- Coordenação com a ideia de pós-processamento resiliente (Problema 2): os dois mexem no contrato de saída do mesmo wrapper, melhor consolidar em uma frente.
+
+### Relacionado
+
+- Skill `xpz-sync` — receptora natural da próxima ação sugerida.
+- `kb-source-metadata.md` — fonte canônica para localizar pasta paralela e índice.
+
+## Auditoria de drift de identidade estável da KB
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** revisão crítica pós-fechamento da frente `Resolve-GeneXusKbIdentity` em 2026-05-20. A frente original de preenchimento de metadata vazio foi registrada em `historico/IdeiasImplementadas_202605.md`; esta é uma frente nova, limitada a auditoria de drift quando o metadata já está preenchido.
+
+### Problema concreto
+
+A auditoria atual detecta `kb-source-metadata.md` ausente, campos críticos vazios, GUID inválido e wrapper `Get-*KbMetadata.ps1` incapaz de expor os campos documentados. Isso cobre metadata incompleto ou quebrado.
+
+Ela não prova, porém, que identidade preenchida e sintaticamente válida ainda corresponde à KB nativa local atual. Casos possíveis:
+
+- GUID antigo depois de recriar, mover ou substituir a KB nativa
+- `kb-source-metadata.md` copiado de outra pasta paralela
+- `username` ou `UNCPath` defasados, com GUID ainda válido
+- valores preenchidos manualmente no passado
+
+Nesses casos, `Test-XpzKbMetadataWrapper.ps1` pode retornar `METADATA_WRAPPER_OK`, porque compara o wrapper contra o próprio `kb-source-metadata.md`; `Test-XpzSetupAudit.ps1` propaga essa dimensão, mas não chama `Resolve-GeneXusKbIdentity.ps1` para comparar metadata gravado contra identidade resolvida agora.
+
+### Direção de investigação
+
+Adicionar uma comparação somente leitura de identidade estável ao fluxo de auditoria, sem transformar `Resolve` em fallback ad hoc de `xpz-sync`, `xpz-builder` ou import MSBuild.
+
+Alternativas a avaliar:
+
+- estender `scripts/Test-XpzSetupAudit.ps1` para executar uma comparação read-only quando houver caminho de KB nativa local confiável
+- criar gate dedicado, por exemplo `scripts/Test-XpzKbIdentityDrift.ps1`
+- reaproveitar `scripts/Update-XpzKbSourceMetadataIdentity.ps1 -WhatIf` se a saída for suficientemente estável e legível para auditoria
+
+### Critério de aceite
+
+Uma pasta com `kb-source-metadata.md` preenchido, wrappers de metadata OK e identidade divergente da KB nativa local deve produzir finding explícito de drift de identidade. A correção automática continua proibida: preenchimento ou sobrescrita de campos deve seguir por frente aprovada de reconciliação via `Update-XpzKbSourceMetadataIdentity.ps1`.
+
+### Relacionado
+
+- `historico/IdeiasImplementadas_202605.md` — caso concluído de preenchimento de metadata a partir da KB nativa quando o XPZ vem com `Source` vazio
+- `scripts/Resolve-GeneXusKbIdentity.ps1`
+- `scripts/Update-XpzKbSourceMetadataIdentity.ps1`
+- `scripts/Test-XpzSetupAudit.ps1`
+- `scripts/Test-XpzKbMetadataWrapper.ps1`
+
+## Dry-run com diff unificado padronizado em scripts de escrita XPZ
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora:
+
+- `00ecd7d feat(worker): standardized dryRun plan with unified diff and impact seam`
+- `5331ca1 feat(worker): genexus_edit returns post_state.diff by default`
+
+Anti-duplicata: buscado em 999/998 por `dry.?run|diff unificado|post.?state|WhatIf` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado nesta sessão — detalhes finos de formato/contrato devem ser confirmados nos commits-âncora antes da implementação.
+
+### Problema concreto que motiva a ideia
+
+Skills que escrevem em disco — `xpz-builder` (gera `import_file.xml`), `xpz-sync` (materializa XMLs a partir de XPZ exportado), `xpz-msbuild-import-export` (consome XPZ na IDE) — hoje executam mutação sem mostrar consistentemente um plano "antes/depois" para o agente. PowerShell tem `-WhatIf` nativo, mas adoção e formato não são padronizados entre wrappers.
+
+No FBgx18MCP, o padrão adotado é: toda escrita devolve `post_state.diff` por padrão, em formato diff unificado. O agente vê o que vai mudar antes de aplicar (ou imediatamente após, com chance de rollback declarado).
+
+### Design em aberto
+
+- **Formato do diff**: texto unificado linha-a-linha (universal, fácil de ler) vs XML diff por part (semântico, mais útil pra XPZ mas exige biblioteca). Escolha provavelmente varia por contexto.
+- **Adoção gradual ou universal**: começar por `xpz-builder` (alto risco, escrita de pacote final), depois `xpz-sync`?
+- **`post_state` ou `pre_state` + plano**: o MCP devolve `post_state.diff` após a operação real; em PowerShell faz mais sentido oferecer `-DryRun` que devolve o plano sem executar.
+
+### Decisões em aberto
+
+- Qual estrutura de saída adotar? JSON com campo `diff` (string), ou objeto estruturado com `added[]/removed[]/changed[]`?
+- Como sinalizar quando o diff é truncado por tamanho (ver ideia "Resposta mínima por padrão" abaixo)?
+
+### Relacionado
+
+- `xpz-builder/SKILL.md`, `xpz-sync/SKILL.md`, `xpz-msbuild-import-export/SKILL.md`
+- `02-regras-operacionais-e-runtime.md` (sede natural da regra geral)
+- Ideia "Idempotência declarativa" abaixo tem sobreposição: dry-run mostra; idempotência detecta repetição.
+
+## Idempotência declarativa em wrappers de escrita XPZ
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commit-âncora:
+
+- `6e266ee feat(gateway): IdempotencyCache + IdempotencyMiddleware on write tools`
+
+Anti-duplicata: buscado em 999/998 por `idempot|colis|hash do payload` em 2026-05-17. Matches encontrados foram restritos a perguntas sobre operações específicas (`RestoreModule`, `CompressKB`), não cobrem a ideia generalizada. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+A regra `Test-XpzPackageCollision.ps1` (já citada em `README.md`) é exatamente um caso particular de idempotência: chave = `NomeCurto_GUID_YYYYMMDD_nn`; em colisão, aborta e sugere próximo `nn` livre. O conceito ainda **não foi promovido a princípio operacional** aplicável a outras escritas (geração de XMLs em `ObjetosGeradosParaImportacaoNaKbNoGenexus`, snapshots de metadados, recriação de pasta paralela).
+
+No FBgx18MCP, `IdempotencyCache` é middleware: toda escrita declara chave por hash do payload; chamada repetida com mesma chave é no-op declarada (não silenciosa).
+
+### Design em aberto
+
+- **Chave canônica por contexto**: pacote = nome+nn; geração de XML = guid+lastUpdate; metadados = hash do conteúdo. Cada escrita declara sua chave.
+- **Onde mora o cache**: arquivo `.idempotency.json` na pasta da frente (`NomeCurto_GUID_YYYYMMDD/`)? Tabela no `KbIntelligence/`? Em memória apenas?
+- **No-op declarado vs silencioso**: usuário sabe que "rodada repetida foi detectada", não só vê sucesso silencioso.
+
+### Decisões em aberto
+
+- TTL/expiração do cache? Pacotes ficam por tempo indeterminado; chave de geração talvez expire por sessão.
+- Como integrar com `-DryRun` (ideia anterior): dry-run também consulta a chave e reporta "essa operação já foi feita"?
+
+### Relacionado
+
+- `Test-XpzPackageCollision.ps1` (caso particular já existente)
+- `02-regras-operacionais-e-runtime.md` (sede natural da regra)
+- Wrappers candidatos: `Sync-GeneXusXpzToXml.ps1`, `xpz-builder` (geração de pacote)
+
+## Resposta mínima por padrão + `empty_reason` + `suggested_next` em scripts de consulta
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora:
+
+- `915750b feat(worker): minimal-by-default list shape; verbose=true opt-in`
+- `2447965 feat(worker): _meta.suggested_next on list_objects`
+- `35d4afc feat(worker): _meta.suggested_next on query/structure/search`
+- `545ac74 feat(worker): _meta.aggregates and empty_reason on list responses`
+
+Anti-duplicata: buscado em 999/998 por `empty_reason|suggested_next|resposta m[ií]nima|verbose` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+Os scripts `-Query` da trilha `KbIntelligence` (em `scripts/`) e a saída de `xpz-index-triage` hoje retornam estruturas razoavelmente verbosas mesmo quando o agente só precisa de uma confirmação curta. Pior: quando o resultado é vazio, **não dizem por quê**, e o agente "chuta" o próximo passo. Isso queima tokens e turnos.
+
+No FBgx18MCP, o contrato adotado é:
+
+- Lista vem **mínima por padrão**; `verbose=true` traz detalhes.
+- Quando vazio, devolve `empty_reason` estruturado ("nenhum objeto com tipo X", "filtro Y excluiu N candidatos", etc.).
+- Devolve `suggested_next`: próximo passo recomendado em forma executável (ex: `tente Get-XpzObjects -Type WebPanel sem filtro de Family`).
+
+### Design em aberto
+
+- **Onde aplicar primeiro**: `xpz-index-triage` é o candidato natural (vocação de triagem curta). Scripts `-Query` do `KbIntelligence` em segundo.
+- **Forma do `suggested_next`**: string com comando literal? Objeto com `command`+`reason`? Lista de alternativas?
+- **`empty_reason` taxonômico**: vocabulário fechado (ex: `no-matches`, `filter-too-narrow`, `index-stale`, `kb-not-resolved`) vs string livre.
+
+### Decisões em aberto
+
+- Como conviver com o `-Verbose` nativo do PowerShell? Provável: `verbose=true` como parâmetro próprio do contrato JSON, distinto do `-Verbose` switch.
+- Output em PowerShell é "objeto" por natureza; aplicar literalmente "resposta mínima por padrão" exige `Select-Object` por padrão e `-Full` opt-in.
+
+### Relacionado
+
+- `xpz-index-triage/SKILL.md`
+- `scripts/README-kb-intelligence.md`
+- `02-regras-operacionais-e-runtime.md` (regra geral de contrato de saída)
+
+## Did-you-mean / sugestão por edit-distance em erros de parâmetro de scripts XPZ
+
+**Importância:** baixa
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commit-âncora:
+
+- `8218122 feat(gateway): genexus_whoami MCP tool, edit schema validation with did-you-mean, GeneXus version check`
+
+Anti-duplicata: buscado em 999/998 por `did.?you.?mean|fuzzy|edit.?distance` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+Scripts PowerShell que recebem `-Type`, `-Family`, `-Name` ou outros enums frequentemente falham com erro genérico ("parâmetro X não é válido") quando o agente passa valor próximo do correto ("Transactioon" em vez de "Transaction"). O agente então gasta turno experimentando variações.
+
+No FBgx18MCP, o validador de schema de `genexus_edit` calcula edit-distance contra valores conhecidos e sugere o termo provável ("did you mean: ...").
+
+### Design em aberto
+
+- **Dicionário-fonte por parâmetro**: enum hardcoded? Lê do índice (`KbIntelligence/` para nomes de objeto)? Mix?
+- **Threshold de edit-distance**: 1, 2, ou proporcional ao tamanho?
+- **Onde aplicar primeiro**: parâmetros com domínio fechado e pequeno (`-Type`) trazem mais benefício; `-Name` contra catálogo de 15k objetos é caro e talvez fora de escopo.
+
+### Decisões em aberto
+
+- Implementação: helper compartilhado em `scripts/_lib/` ou cópia por script?
+- Comportamento: continua erro fatal com sugestão, ou erro recuperável "vou usar X?". Provavelmente erro fatal — não deduzir.
+
+### Relacionado
+
+- Wrappers candidatos: qualquer um que valide enums (build, sync, import-export, triage)
+
+## Documentos de governança na raiz: SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, CHANGELOG
+
+**Importância:** baixa
+**Maturidade:** pesquisa feita
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commit-âncora:
+
+- `4cf26ef docs: add SECURITY, CONTRIBUTING, and CODE_OF_CONDUCT`
+
+Anti-duplicata: buscado em 999/998 por `SECURITY|CONTRIBUTING|CODE_OF_CONDUCT|CHANGELOG|governan[çc]a` em 2026-05-17, sem match. Limitação: nenhuma — verificado por `ls` da raiz que os quatro arquivos não existem em 2026-05-17.
+
+### Problema concreto que motiva a ideia
+
+O repositório é público (já há `09-inventario-e-rastreabilidade-publica.md`) e contém base metodológica com potencial de adoção externa. Falta os quatro arquivos canônicos de repositório público:
+
+- `SECURITY.md` — política de divulgação de vulnerabilidades (mesmo que mínima: "abrir issue privada / contato")
+- `CONTRIBUTING.md` — como contribuir, regras de PR, fluxo de revisão
+- `CODE_OF_CONDUCT.md` — Contributor Covenant é o padrão de facto
+- `CHANGELOG.md` — registro de mudanças. Reconstrução histórica retroativa é cara; viável começar do "agora em diante" referenciando `historico/` para o passado.
+
+### Design em aberto
+
+- **CHANGELOG**: começar de 2026-05-17 com referência a `historico/` para o passado, ou tentar reconstruir versões a partir de tags git? Provavelmente o primeiro — versionamento semântico do repo não está formalizado.
+- **SECURITY**: precisa de canal real de contato (email do mantenedor? issue privada GitHub?).
+- **Trilíngue**: `README.md` é trilíngue. Os quatro novos devem ser também? Possivelmente sim — o repo já assumiu compromisso público trilíngue.
+- **CONTRIBUTING**: precisa refletir as regras locais do `AGENTS.md` (edição segura de .md, anti-duplicata em 998/999, revisão pré-push) traduzidas para humano contribuidor.
+
+### Decisões em aberto
+
+- Canal de contato no SECURITY.md.
+- Linguagem do CHANGELOG (Keep a Changelog é o padrão).
+- Versionamento: tags semânticas no git?
+
+### Relacionado
+
+- `README.md` (trilíngue — referência de tom)
+- `AGENTS.md` (regras a traduzir para CONTRIBUTING humano)
+
+## Ciclo de friction-report datado como motor de evolução das skills XPZ
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora (mostram o ciclo):
+
+- `0a5214b perf+fix(v2.3.5): preventive perf audit + friction-report 2026-05-14 sweep`
+- `5296f75 fix(v2.3.5): second pass on friction-report 2026-05-14 (#2 #3 #4 #5 #11 #14 #15 #16 #17)`
+- `0a673b3 fix(worker,gateway): close 8 items from mcp-friction-report-2026-05-13`
+- `e10d382 fix(mcp): address 5 friction items from session report`
+
+Anti-duplicata: buscado em 999/998 por `friction|fric[çc][ãa]o|relat[óo]rio de uso` em 2026-05-17, sem match.
+
+### Problema concreto que motiva a ideia
+
+O repo já tem `999-ideias-pendentes.md` (backlog de ideias estruturadas) e `998-ideias-descartadas-e-porque.md` (memória de não-fazer). O que falta é o **artefato datado de fricção observada em uso real** — separado do backlog conceitual. Esse artefato faz a ponte uso real → backlog → fix.
+
+No FBgx18MCP, o padrão é: cada release significativa tem um `mcp-friction-report-YYYY-MM-DD.md` listando itens numerados. Commits posteriores referenciam explicitamente "closes #3 #4 #5 from friction-report-YYYY-MM-DD". Essa rastreabilidade dá ao mantenedor visão de "quanto da fricção observada virou fix".
+
+### Design em aberto
+
+- **Pasta sede**: `historico/friction-reports/`? Raiz com prefixo numérico (ex: `13-friction-reports/`)?
+- **Esquema**: itens numerados, severidade (baixa/média/alta/bloqueante), origem (sessão, skill, contexto), estado (aberto/fechado), commit que fechou.
+- **Quem captura**: o agente, ao final de sessão complexa, propõe entradas? O usuário, manualmente? Híbrido?
+- **Relação com 999**: itens de friction-report viram entradas em 999 quando exigem design, ou ficam só no report quando são fix mecânico?
+
+### Decisões em aberto
+
+- Política de captura: oportunista (quando lembra) vs sistemática (toda sessão fecha com pergunta "houve fricção?").
+- Histórico longo: quando arquivar reports antigos.
+
+### Relacionado
+
+- `998-ideias-descartadas-e-porque.md`
+- `999-ideias-pendentes.md`
+- `historico/` (sede candidata)
+
+## Comandos `doctor` e `whoami` para `xpz-skills-setup`
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora:
+
+- `c464165 feat(cli): onboarding UX — auto-discovery, whoami, uninstall, kb catalog + docs`
+- `8218122 feat(gateway): genexus_whoami MCP tool, edit schema validation with did-you-mean, GeneXus version check`
+
+Anti-duplicata: buscado em 999/998 por `doctor|whoami` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+A skill `xpz-skills-setup` já audita o registro de skills XPZ cross-tool (Claude/Codex/Cursor/OpenCode) e oferece resolução de gaps. Faltam dois comandos irmãos com utilidade alta:
+
+- **`doctor`**: verifica saúde do ambiente — frescor do índice (`last_index_build_run_at` vs `last_xpz_materialization_run_at`), drift documental local, `GATE_OK` semântico, existência de skills em todas as ferramentas registradas. Devolve relatório taxonômico (`ok/warn/err`).
+- **`whoami`**: lista quais skills XPZ estão ativas neste host, em qual ferramenta, apontando para a fonte (caminho do symlink/junction). Útil quando o usuário tem múltiplas instalações ou faz troubleshooting.
+
+### Design em aberto
+
+- **Forma**: scripts `.ps1` em `xpz-skills-setup/`, ou novos verbos da skill?
+- **Saída**: JSON estruturado por padrão (consumível por agente) com formatação humana opcional.
+- **`doctor` cobertura**: começa enxuto (registro de skills + frescor do índice) e cresce por demanda; tentar cobrir tudo de uma vez é armadilha.
+
+### Decisões em aberto
+
+- Onde ficam os checks individuais? Funções em `xpz-skills-setup/_lib/` agregadas pelo `doctor`?
+- Integração com regra do `AGENTS.md` global sobre "auditoria pós-git-pull" — `doctor` é o canal natural.
+
+### Relacionado
+
+- `xpz-skills-setup/SKILL.md` (sede principal)
+- Regra "Após git pull" no AGENTS.md global do usuário
+
+## Modo `-Async` + long-poll de status em `xpz-msbuild-build` e `xpz-msbuild-import-export`
+
+**Importância:** baixa
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora:
+
+- `6501de2 feat(gateway): async lifecycle build with sync fast-path for short estimates`
+- `518169f feat(gateway): long-poll on lifecycle status when wait_seconds is set`
+- `51bc64c feat(gateway): BackgroundJobRegistry for async job tracking`
+- `ff9c38e feat(gateway): piggyback background_jobs on every response when active`
+
+Anti-duplicata: buscado em 999/998 por `long.?poll|ass[íi]ncron|background.?job` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+`xpz-msbuild-build` e `xpz-msbuild-import-export` rodam MSBuild que pode tomar minutos em KB grande. Hoje o wrapper é síncrono — o agente fica bloqueado, e timeouts de orquestração (ex: limite de execução de comando do harness) podem abortar prematuramente.
+
+No FBgx18MCP, build longo vira job em background; o canal MCP devolve `job_id` rápido; agente faz `Get-Status -JobId -WaitSeconds N` quando quiser, com fast-path síncrono para builds curtos estimados.
+
+### Design em aberto
+
+- **Heurística de fast-path**: como decidir "build curto"? Por tamanho da KB? Histórico de builds passados? Always-async com poll imediato é mais simples.
+- **Sede do registry**: arquivo JSON em `Temp/` com PID + status? Process job nativo do Windows?
+- **Política de cleanup**: jobs concluídos ficam por quanto tempo?
+- **Cancelamento**: agente pode pedir kill do job? Provavelmente sim, com gate.
+
+### Decisões em aberto
+
+- PowerShell tem `Start-Job` nativo, mas estado vive na sessão. Para sobreviver a fim de sessão, precisa de wrapper baseado em processo + arquivo de estado.
+- Como integrar com a regra "operação concluída, pendente de confirmação funcional" do classificador atual.
+
+### Relacionado
+
+- `xpz-msbuild-build/SKILL.md` (sede principal)
+- `xpz-msbuild-import-export/SKILL.md`
+- `scripts/Invoke-GeneXusKbBuildAll.ps1` e equivalente de import
+
+## `config.sample.json` versionado + `config.json` no `.gitignore` (se aplicável)
+
+**Importância:** baixa
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commit-âncora:
+
+- `a41755e fix(ci): copy config.sample.json instead of gitignored config.json`
+
+Anti-duplicata: sem busca aplicável (termos genéricos demais). Limitação: não inspecionei `scripts/` a fundo nesta sessão para verificar se há `config.json` candidato hoje — pode ser que a ideia seja inaplicável; nesse caso, mover esta entrada para `998` como "não aplicável neste repositório".
+
+### Problema concreto que motiva a ideia
+
+Prática de segurança: separar configuração padrão (versionada como `*.sample.json`) de configuração local com possíveis segredos/paths sensíveis (`*.json` no `.gitignore`). Evita commit acidental de credenciais ou paths que vazam topologia.
+
+No FBgx18MCP, foi feita a substituição porque havia `config.json` versionado anteriormente.
+
+### Design em aberto
+
+- **Aplicabilidade**: verificar primeiro se há arquivos de config locais usados por scripts do repo. Se não houver, a ideia entra em 998 em vez de continuar em 999.
+- **Convenção de nome**: `.sample.json`, `.example.json`, `.template.json` — a primeira é a mais comum no ecossistema.
+
+### Decisões em aberto
+
+- Antes de implementar, mapear se existe alguma config local hoje em `scripts/` ou nas skills.
+
+### Relacionado
+
+- `scripts/` (a inspecionar)
+- `.gitignore` (sede do bloqueio)
+
+## Catálogo semântico de operações em `xpz-builder` (alternativa a edição XML livre)
+
+**Importância:** média
+**Maturidade:** ideia
+
+**Origem:** alinhamento com upstream FBgx18MCP v2.0.0→v2.3.6, sessão 2026-05-17. Commits-âncora:
+
+- `1efd0c1 feat: wire mode:ops end-to-end through gateway and worker`
+- `5659cab feat(worker): SemanticOpsService catalog with attribute, rule, and generic set_property ops`
+- `21a67ca feat: JSON-Patch (RFC 6902) edit mode over canonical JSON`
+
+Anti-duplicata: buscado em 999/998 por `cat[áa]logo sem[âa]ntico|semantic.?ops|set_property` em 2026-05-17, sem match. Limitação: código C# do FBgx18MCP não inspecionado.
+
+### Problema concreto que motiva a ideia
+
+`xpz-builder` hoje apoia a materialização de artefatos XPZ a partir de moldes sanitizados (`01e` a `01h`). A geração inclui edição de XML cru, que tem superfície de risco grande: agente pode inserir tag malformada, atributo fora do contrato, ordem errada de elementos.
+
+No FBgx18MCP, a evolução foi: além de edição livre, oferecer um **catálogo de operações estruturais nomeadas** (`set_property`, `add_attribute`, regras específicas por tipo de objeto). Cada operação é auditável, testável e tem schema próprio.
+
+Para `xpz-builder`, isso significaria expor um vocabulário de operações de alto nível (ex: `Add-XpzAttributeToTransaction`, `Set-XpzTransactionProperty`, `Add-XpzVariableToProcedure`) por cima do XML, validadas contra os padrões empíricos já documentados em `01a-catalogo-e-padroes-empiricos.md`.
+
+### Design em aberto
+
+- **Cobertura inicial**: começar pelos tipos mais arriscados de edição cega (`Transaction` em `05-...`, `WebPanel` em `04-...`) e operações mais frequentes.
+- **Forma**: cmdlets PowerShell `Verb-XpzNoun` com schema validado, ou um único `Invoke-XpzOp -Op <name> -Args @{}`.
+- **Relação com moldes**: operação semântica é "molde paramétrico" — ponte natural entre `xpz-builder/responsibilities-by-type/` e este catálogo.
+- **JSON-Patch RFC 6902**: o MCP também oferece edição via JSON-Patch sobre representação canônica. Para PowerShell, JSON-Patch sobre XML transformado tem custo de design alto e provavelmente fica fora do escopo inicial.
+
+### Decisões em aberto
+
+- Que tipos cobrir primeiro?
+- Como conviver com edição livre (não eliminar — deixar como fallback para casos que o catálogo não cobre).
+
+### Relacionado
+
+- `xpz-builder/SKILL.md` e `xpz-builder/responsibilities-by-type/`
+- `01a-catalogo-e-padroes-empiricos.md` (fonte de validação dos padrões)
+- `01e-moldes-sanitizados-core.md` a `01h-moldes-sanitizados-metadados-e-artefatos.md` (insumo)

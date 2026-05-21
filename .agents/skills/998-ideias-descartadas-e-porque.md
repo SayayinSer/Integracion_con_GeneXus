@@ -1296,3 +1296,26 @@ Sem as ferramentas técnicas, roteiros viram especulativos e casos reais não t�
 A base compartilhada já tem onde encaixar esse conteúdo quando ele existir: `08-guia-para-agente-gpt.md` para roteiros operacionais; `01h-moldes-sanitizados-metadados-e-artefatos.md` para casos sanitizados. A infraestrutura editorial está pronta; só falta a substância técnica que as frentes em 999 vão produzir.
 
 **Não reavaliar** como frentes independentes. Quando uma frente técnica em 999 virar implementação, incluir roteiro e caso real no escopo dela.
+
+---
+
+## Índice geral em `scripts/` (README agregado)
+
+**Origem:** avaliação de prompt externo em 2026-05-16, sobre revisão pré-push da frente de extração dos gates determinísticos do `xpz-builder` (Sub-fases 1.1 a 1.5).
+
+**O que era:** proposta de criar `scripts/README.md` agregando inventário curto dos scripts da pasta (gates `Test-GeneXus*`, wrappers `Build/Invoke/Sync-GeneXus*`, etc.) para servir como ponto único de descoberta a partir da pasta `scripts/`.
+
+**Por que foi descartada:**
+
+A pasta `scripts/` é apoio operacional, não fonte normativa. Regra explícita do `README.md` raiz: "a pasta `scripts/` existe como apoio operacional, analítico e editorial compartilhavel, mas nao e fonte normativa da documentacao consolidada da raiz". Cada script tem dono lógico em uma skill:
+
+- `Test-GeneXus*.ps1` de empacotamento → contratos em `xpz-builder/SKILL.md` e satélites `xpz-builder/responsibilities-by-type/*.md`
+- `Sync-GeneXusXpzToXml.ps1`, `Invoke-GeneXusXpz*.ps1` → `xpz-sync` e `xpz-msbuild-import-export`
+- `Build-KbIntelligenceIndex.{ps1,py}`, `Query-KbIntelligenceIndex.{ps1,py}` → já cobertos por `scripts/README-kb-intelligence.md` (README dedicado da trilha)
+- `Build-GeneXusImportFileEnvelope.ps1`, `New-XpzImportPackage.{ps1,py}` → `xpz-builder` e `xpz-msbuild-import-export`
+
+Um README agregado em `scripts/` duplicaria descrições já documentadas nas skills consumidoras, criando três caminhos para a mesma informação driftar: skill → README agregado → cabeçalho do próprio script. O custo de manutenção supera o ganho de descoberta para o público-alvo, que carrega skill primeiro e desce ao script depois.
+
+Para descoberta a partir da raiz, `07-open-points-e-checklist.md` lista os gates determinísticos da Fase 9 do xpz-builder por nome de script, apontando o contrato de uso para a skill `xpz-builder`. Esse já é o ponto de entrada agregado mínimo, sem criar README terciário.
+
+**Não reavaliar** salvo aparição de scripts órfãos sem skill consumidora documentando-os, ou mudança de público (consumo externo direto da pasta `scripts/` por agente que não carrega skill XPZ).

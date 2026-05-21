@@ -1,0 +1,258 @@
+import uuid
+
+def get_guid():
+    return str(uuid.uuid4())
+
+MODELO_DATOS_GUID = "739a892b-5720-447c-ae75-b9c7ebe36275"
+ROOT_MODULE_GUID = "afa47377-41d5-4ae8-9755-6f53150aa361"
+
+API_GUID = get_guid()
+PROC_INSERTAR_GUID = get_guid()
+PROC_MODIFICAR_GUID = get_guid()
+PROC_BORRAR_GUID = get_guid()
+DP_ITEM_GUID = get_guid()
+DP_LISTA_GUID = get_guid()
+SDT_ITEM_GUID = get_guid()
+SDT_LISTA_GUID = get_guid()
+
+MESSAGES_VAR = """<Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>"""
+BC_VAR = """<Variable Name="Caja"><Properties><Property><Name>Name</Name><Value>Caja</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Caja</Value></Property></Properties></Variable>"""
+ID_VAR = """<Variable Name="CajaId"><Properties><Property><Name>Name</Name><Value>CajaId</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaId</Value></Property></Properties></Variable>"""
+DESC_VAR = """<Variable Name="CajaDescripcion"><Properties><Property><Name>Name</Name><Value>CajaDescripcion</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaDescripcion</Value></Property></Properties></Variable>"""
+ESTADO_VAR = """<Variable Name="CajaEstado"><Properties><Property><Name>Name</Name><Value>CajaEstado</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaEstado</Value></Property></Properties></Variable>"""
+SALDO_INI_VAR = """<Variable Name="CajaSaldoInicial"><Properties><Property><Name>Name</Name><Value>CajaSaldoInicial</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaSaldoInicial</Value></Property></Properties></Variable>"""
+TOT_ING_VAR = """<Variable Name="CajaTotalIngresos"><Properties><Property><Name>Name</Name><Value>CajaTotalIngresos</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaTotalIngresos</Value></Property></Properties></Variable>"""
+TOT_EGR_VAR = """<Variable Name="CajaTotalEgresos"><Properties><Property><Name>Name</Name><Value>CajaTotalEgresos</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaTotalEgresos</Value></Property></Properties></Variable>"""
+SALDO_ACT_VAR = """<Variable Name="CajaSaldoActual"><Properties><Property><Name>Name</Name><Value>CajaSaldoActual</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaSaldoActual</Value></Property></Properties></Variable>"""
+
+xml_output = f"""<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW><MajorVersion>4</MajorVersion><MinorVersion>0</MinorVersion><Build>177934</Build></KMW>
+  <Objects>
+    <!-- SDT: Caja_SDT -->
+    <Object fullyQualifiedName="Caja_SDT" guid="{SDT_ITEM_GUID}" name="Caja_SDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Recupera Informacion Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="Caja_SDT">
+          <LevelInfo guid="{get_guid()}" name="Caja_SDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja_SDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>Caja_SDT</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="{get_guid()}" name="CajaId" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaId</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaId</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaDescripcion" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Descripcion" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaDescripcion</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaDescripcion</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaEstado" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Estado" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaEstado</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaEstado</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaSaldoInicial" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Saldo Inicial" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaSaldoInicial</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaSaldoInicial</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaTotalIngresos" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Total Ingresos" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaTotalIngresos</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaTotalIngresos</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaTotalEgresos" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Total Egresos" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaTotalEgresos</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaTotalEgresos</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaSaldoActual" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Saldo Actual" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaSaldoActual</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaSaldoActual</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="ExisteSioNo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Existe Sio No" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ExisteSioNo</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:SioNo</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Caja_SDT</Value></Property><Property><Name>Description</Name><Value>Recupera Informacion Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- SDT: CajaListaSDT -->
+    <Object fullyQualifiedName="CajaListaSDT" guid="{SDT_LISTA_GUID}" name="CajaListaSDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Lista de Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="CajaListaSDT">
+          <LevelInfo guid="{get_guid()}" name="CajaListaSDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="CajaListaSDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaListaSDT</Value></Property><Property><Name>AttCollection</Name><Value>True</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="{get_guid()}" name="CajaId" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaId</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaId</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaDescripcion" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Descripcion" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaDescripcion</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaDescripcion</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaEstado" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Estado" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaEstado</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaEstado</Value></Property></Properties>
+          </Item>
+          <Item guid="{get_guid()}" name="CajaSaldoActual" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Caja Saldo Actual" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CajaSaldoActual</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CajaSaldoActual</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CajaListaSDT</Value></Property><Property><Name>Description</Name><Value>Lista de Caja</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- Proc: Caja_Insertar -->
+    <Object fullyQualifiedName="Caja_Insertar" guid="{PROC_INSERTAR_GUID}" name="Caja_Insertar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Insertar Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Caja.CajaId = &CajaId
+&Caja.CajaDescripcion = &CajaDescripcion
+&Caja.CajaEstado = &CajaEstado
+&Caja.CajaSaldoInicial = &CajaSaldoInicial
+&Caja.Insert()
+if &Caja.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Caja.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        {BC_VAR}
+        {ID_VAR}
+        {DESC_VAR}
+        {ESTADO_VAR}
+        {SALDO_INI_VAR}
+        {MESSAGES_VAR}
+      </Part>
+    </Object>
+
+    <!-- Proc: Caja_Modificar -->
+    <Object fullyQualifiedName="Caja_Modificar" guid="{PROC_MODIFICAR_GUID}" name="Caja_Modificar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Modificar Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Caja.Load(&CajaId)
+&Caja.CajaDescripcion = &CajaDescripcion
+&Caja.CajaEstado = &CajaEstado
+&Caja.CajaSaldoInicial = &CajaSaldoInicial
+&Caja.Update()
+if &Caja.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Caja.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        {BC_VAR}
+        {ID_VAR}
+        {DESC_VAR}
+        {ESTADO_VAR}
+        {SALDO_INI_VAR}
+        {MESSAGES_VAR}
+      </Part>
+    </Object>
+
+    <!-- Proc: Caja_Borrar -->
+    <Object fullyQualifiedName="Caja_Borrar" guid="{PROC_BORRAR_GUID}" name="Caja_Borrar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Borrar Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Caja.Load(&CajaId)
+&Caja.Delete()
+if &Caja.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Caja.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&CajaId, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        {BC_VAR}
+        {ID_VAR}
+        {MESSAGES_VAR}
+      </Part>
+    </Object>
+
+    <Object fullyQualifiedName="Caja_DP" guid="{DP_ITEM_GUID}" name="Caja_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[Caja_SDT From Caja where CajaId = &CajaId
+{{
+    CajaId
+    CajaDescripcion
+    CajaEstado
+    CajaSaldoInicial
+    CajaTotalIngresos
+    CajaTotalEgresos
+    CajaSaldoActual
+    ExisteSioNo = SioNo.Si
+}}
+Caja_SDT [Default]
+{{
+    ExisteSioNo = SioNo.No
+}}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&CajaId);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        {ID_VAR}
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Caja_DP</Value></Property><Property><Name>Description</Name><Value>DP Caja</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-Caja_SDT</Value></Property></Properties>
+    </Object>
+
+    <Object fullyQualifiedName="CajaLista_DP" guid="{DP_LISTA_GUID}" name="CajaLista_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Lista Caja" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[CajaListaSDT From Caja
+Order CajaId
+{{
+    CajaId
+    CajaDescripcion
+    CajaEstado
+    CajaSaldoActual
+}}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm();]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>CajaLista_DP</Value></Property><Property><Name>Description</Name><Value>DP Lista Caja</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-CajaListaSDT</Value></Property></Properties>
+    </Object>
+
+    <!-- API: API_Cajas -->
+    <Object fullyQualifiedName="API_Cajas" guid="{API_GUID}" name="API_Cajas" type="36e32e2d-023e-4188-95df-d13573bac2e0" description="API Cajas" parentGuid="{MODELO_DATOS_GUID}" moduleGuid="{ROOT_MODULE_GUID}">
+      <Part type="9f577ec2-27f4-4cf4-8ad5-f3f50c9d69b5">
+        <Source><![CDATA[APICajas
+{{
+    [RestMethod(GET)] Listar(out:&CajaListaSDT) => CajaLista_DP(out:&CajaListaSDT);
+    [RestMethod(GET)] Buscar(in:&CajaId, out:&Caja_SDT) => Caja_DP(in:&CajaId, out:&Caja_SDT);
+    [RestMethod(POST)] Insertar(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages) => Caja_Insertar(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages);
+    [RestMethod(PUT)] Modificar(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages) => Caja_Modificar(in:&CajaId, in:&CajaDescripcion, in:&CajaEstado, in:&CajaSaldoInicial, out:&Messages);
+    [RestMethod(DELETE)] Borrar(in:&CajaId, out:&Messages) => Caja_Borrar(in:&CajaId, out:&Messages);
+}}]]></Source>
+      </Part>
+      <Part type="c44bd5ff-f918-415b-98e6-aca44fed84fa">
+        <Source><![CDATA[]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        {ID_VAR}
+        {DESC_VAR}
+        {ESTADO_VAR}
+        {SALDO_INI_VAR}
+        {MESSAGES_VAR}
+        <Variable Name="Caja_SDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Caja_SDT</Value></Property></Properties></Variable>
+        <Variable Name="CajaListaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:CajaListaSDT</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+  </Objects>
+</ExportFile>
+"""
+
+with open(r"d:\aaProyectos\Entorno04\Envio_XPZ\API_Cajas.xml", "w", encoding="utf-8") as f:
+    f.write(xml_output)
+
+print("Generated API_Cajas.xml")

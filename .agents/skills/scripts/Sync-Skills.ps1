@@ -1,7 +1,7 @@
 
 $localSkills = "d:\aaProyectos\Entorno04\.agents\skills"
-$globalSkills = "$env:USERPROFILE\.gemini\antigravity\skills"
-$mcpConfig = "$env:USERPROFILE\.gemini\antigravity\mcp_config.json"
+$globalSkills = "$env:USERPROFILE\.gemini\config\skills"
+$mcpConfig = "$env:USERPROFILE\.gemini\config\mcp_config.json"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $backupRoot = "d:\aaProyectos\Entorno04\Backups\Skills_Backup_$timestamp"
 

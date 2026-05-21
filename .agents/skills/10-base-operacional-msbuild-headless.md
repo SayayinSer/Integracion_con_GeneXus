@@ -2,7 +2,7 @@
 
 ## Status
 
-Documento base de uso operacional da skill `xpz-msbuild-import-export`.
+Documento base de uso operacional compartilhado da trilha MSBuild headless, usado pelas skills `xpz-msbuild-import-export` e `xpz-msbuild-build`.
 
 Já existe um `SKILL.md` materializado em `xpz-msbuild-import-export/SKILL.md`, apto para uso sob demanda em pasta paralela de KB GeneXus, com operação controlada e limites explícitos.
 
@@ -16,13 +16,17 @@ Também já existe uma implementação inicial de `scripts/Invoke-GeneXusXpzExpo
 
 Também já existe uma implementação inicial de `scripts/Invoke-GeneXusXpzImport.ps1`, restrita à importação real de `XPZ` com parâmetros explícitos, diagnóstico em `JSON` e validação da task carregada.
 
+Também já existe uma implementação inicial de `scripts/Read-MsBuildImportSignals.ps1`, restrita à leitura compacta de `msbuild.stdout.log`/`msbuild.stderr.log`, sem abrir KB e sem depender de GeneXus instalado.
+
+Também já existem utilitários compactos de leitura de pacote/objeto (`scripts/Extract-XpzObject.ps1`, `scripts/Get-GeneXusObjectSummary.ps1`, `scripts/Compare-GeneXusPanelShape.ps1`), restritos a extração e comparação sem despejar XML/CDATA inteiro.
+
 Esta base não substitui o fluxo oficial atual da trilha paralela da KB, não altera o comportamento das demais skills `xpz-*` e não trata sucesso operacional como evidência suficiente de sucesso funcional.
 
 Este documento é par de `02-regras-operacionais-e-runtime.md`, não downstream dele. Achados empíricos de scripts MSBuild — incompatibilidades de tasks, comportamento verificado de API, evidências de execução em KB real — pertencem aqui. Regras transversais sobre estrutura XPZ/XML e runtime GeneXus pertencem a `02-regras`.
 
 ## Objetivo
 
-Consolidar as diretrizes operacionais, restrições, riscos conhecidos e evidências de validação da skill dedicada à importação e exportação de `XPZ` do GeneXus por automação headless baseada em `MSBuild`, sem depender da operação manual pela IDE.
+Consolidar as diretrizes operacionais, restrições, riscos conhecidos e evidências de validação da trilha MSBuild headless: importação/exportação de `XPZ` e build/geração do GeneXus por automação baseada em `MSBuild`, sem depender da operação manual pela IDE.
 
 ## Escopo Operacional Atual
 
@@ -539,7 +543,8 @@ Consequências práticas imediatas:
 
 - o wrapper de preview não deve emitir `UpdateFile` por padrão nesta instalação
 - `ImportKBInformation` não deve ser emitido por padrão nesta instalação
-- quando o usuário pedir `UpdateFile` ou `ImportKBInformation`, a frente deve tratar isso como capacidade dependente da assinatura efetiva da task carregada, não apenas da documentação offline
+- `ImportKbInformation=false` solicitado pelo agente deve ser tratado como valor neutro: o wrapper deve omitir o atributo, não bloquear; apenas `ImportKbInformation=true` em instalação sem suporte dispara `preview bloqueado por assinatura da task` ou `import bloqueado por assinatura da task`
+- quando o usuário pedir `UpdateFile` ou `ImportKBInformation` em valor não neutro, a frente deve tratar isso como capacidade dependente da assinatura efetiva da task carregada, não apenas da documentação offline
 - o teste 4 do plano permanece metodologicamente válido, mas nesta instalação ficou bloqueado por incompatibilidade observada da task carregada
 - `IncludeItems` e `ExcludeItems` tiveram efeito operacional confirmado em `PreviewMode` nesta instalação
 - o contrato do diagnóstico do wrapper deve preservar `importedItems` sempre como lista, inclusive quando houver apenas um item retornado
@@ -569,7 +574,7 @@ Conclusão operacional desta frente:
 - o caminho headless validado para exportação parcial é fornecer explicitamente a lista de objetos em `Objects`/`ObjectList`
 - quando o usuário precisar selecionar objetos por data e não houver lista prévia, a seleção por data permanece dependente da IDE ou de outra fonte externa autorizada que produza a lista de objetos
 
-**Advertência sobre exportação parcial com lista explícita:** mesmo quando `Objects`/`ObjectList` nomeia objetos concretos, o GeneXus pode incluir no `.xpz` **objetos adicionais** (dependências, referências, módulos organizacionais) conforme parâmetros da task (`DependencyType`, `ReferenceType`) e comportamento padrão. **Não** concluir que o pacote coincide com a lista nominal **sem** abrir o artefato e inventariar todo o conteúdo antes de importar. A skill `xpz-msbuild-import-export` documenta checklist de inventário e o anti-padrão “export como casca + patch + import”.
+**Advertência sobre exportação parcial com lista explícita:** mesmo quando `Objects`/`ObjectList` nomeia objetos concretos, o GeneXus pode incluir no `.xpz` **objetos adicionais** (dependências, referências, módulos organizacionais) conforme parâmetros da task (`DependencyType`, `ReferenceType`) e comportamento padrão. **Não** concluir que o pacote coincide com a lista nominal **sem** abrir o artefato e inventariar todo o conteúdo antes de importar. Para o artefato cotidiano `import_file.xml`, o motor compartilhado `scripts/Get-GeneXusImportPackageObjectInventory.ps1` produz esse inventário de forma determinística e pode confrontar o conteúdo com um delta declarado em texto `Tipo:Nome`. A skill `xpz-msbuild-import-export` documenta checklist de inventário e o anti-padrão “export como casca + patch + import”.
 
 ## Checklist Inicial De Requisitos Da Skill
 
@@ -612,6 +617,10 @@ Scripts propostos:
   - objetivo: exportar `XPZ` com parâmetros explícitos
 - `Invoke-GeneXusXpzImport.ps1`
   - objetivo: executar importação real apenas em fase já autorizada de teste controlado
+- `Read-MsBuildImportSignals.ps1`
+  - objetivo: produzir JSON compacto de logs brutos de preview/import, com itens importados, warnings, erros, versão/Environment ativos, sucesso da task Import e warnings de layout agrupados por Panel
+- `Extract-XpzObject.ps1`, `Get-GeneXusObjectSummary.ps1`, `Compare-GeneXusPanelShape.ps1`
+  - objetivo: extrair, resumir e comparar objetos GeneXus em XML/XPZ sem imprimir pacote completo nem CDATA extenso
 - `Watch-GeneXusMsBuildLog.ps1`
   - objetivo: monitorar incrementalmente o log de uma execução headless em andamento, sem depender do chat para polling; encerra sozinho quando o processo termina
   - parâmetros obrigatórios: `-Pid`, `-LogPath`
@@ -624,6 +633,8 @@ Scripts propostos:
 Estado atual da materialização adicional:
 
 - `Invoke-GeneXusXpzExport.ps1`: implementado para exportação headless de `XPZ` com parâmetros explícitos e diagnóstico em `JSON`
+- `Read-MsBuildImportSignals.ps1`: implementado para reduzir consumo de tokens na leitura de logs MSBuild; os wrappers de preview/import gravam `msbuild.import.signals.json` ao lado dos logs brutos quando a leitura compacta consegue executar
+- `Extract-XpzObject.ps1`, `Get-GeneXusObjectSummary.ps1`, `Compare-GeneXusPanelShape.ps1`: implementados para reduzir consumo de tokens em analise de XML/XPZ e diagnostico de Panel; devem ser preferidos a buscas que imprimam linhas grandes de `CDATA`
 - `Watch-GeneXusMsBuildLog.ps1`: implementado como monitor incremental de execução headless; destaca fases do GeneXus (Open, Specify, Generate, Compile, BuildAll, Reorg, Validating subtype group, Close), detecta silêncio prolongado e encerra sozinho quando o processo termina; exibe contador de silêncio in-place (sem gerar nova linha a cada poll); quando `-MonitorLog` é passado com o mesmo caminho de `-MonitorLogPath` em `Invoke-GeneXusKbBuildAll.ps1`, o JSON de resultado inclui `timing.phases` com duração de cada fase interna; iniciar com `-NoExit` para a janela permanecer aberta após o build
 - `Test-GeneXusRuntimeFreshness.ps1`: implementado como diagnóstico somente leitura de frescor de runtime; verifica `nav_objs.xml` e timestamps dos artefatos gerados; saída JSON com `runtime-fresh`, `runtime-stale` ou `runtime-unknown`
 
@@ -649,14 +660,14 @@ Parâmetros específicos de exportação:
 
 Parâmetros específicos de importação:
 
-- `-XpzPath`
+- `-XpzPath` (aceita `.xpz`, `.xml` e `.import_file.xml` quando o envelope foi validado por `Test-GeneXusImportFileEnvelope.ps1`; nome do parâmetro é histórico e não restringe a extensão)
 - `-PreviewMode`
 - `-UpdateFilePath`
 - `-IncludeItems`
 - `-ExcludeItems`
 - `-AutomaticBackup`
 - `-ImportType`
-- `-ImportKbInformation`
+- `-ImportKbInformation` (tri-state: omitido ou `false` equivalem a não emitir o atributo; apenas `true` emite e exige suporte na task carregada)
 
 Saídas esperadas dos scripts:
 
@@ -670,7 +681,36 @@ Saídas esperadas dos scripts:
   - sucesso operacional
   - falha operacional
   - operação apenas em preview
+  - sucesso operacional com falha no pos-processamento — `executionEvidence.msBuildExitCode=0`, evidência primária do log bruto presente (`__IMPORTED_ITEM__` ou `__EXPORTED_FILE__` mais arquivo XPZ existente), mas pos-processamento local do wrapper falhou e o JSON saiu com `postProcessingFailed=true`; não é `falha operacional`
+  - preview apenas com falha no pos-processamento — análogo ao anterior na fase de preview: `executionEvidence.msBuildExitCode=0` sem alterar a KB, evidência primária preservada no log bruto, pos-processamento local falhou; não é `falha operacional`
   - operação concluída, porém ainda pendente de confirmação funcional
+- no diagnóstico JSON, distinguir `exitCode` (valor classificado pelo wrapper — 0/32/41/42/... — e também exit code do processo) de `executionEvidence.msBuildExitCode` (local canônico do valor bruto da task MSBuild); `msBuildExitCode` top-level, quando existir, é compatibilidade transitória e deve duplicar o valor canônico; ambos devem aparecer no diagnóstico parcial em caso de falha no pos-processamento
+
+### Contrato Transversal De Diagnóstico JSON Dos Wrappers MSBuild
+
+Este contrato aplica-se aos wrappers que já chamaram `MSBuild` ou processaram seus logs. Ele não pertence ao probe `Test-GeneXusMsBuildSetup.ps1`, que não abre KB nem invoca tasks operacionais.
+
+- `exitCode`
+  - valor classificado pelo wrapper e também exit code do processo
+- `executionEvidence`
+  - registro objetivo da execução quando o wrapper já chamou `MSBuild`: `msBuildExitCode`, `msBuildFailed`, `wrapperExitCode` e caminhos dos logs brutos quando disponíveis
+  - quando o `MSBuild` falhar sem causa acionável classificada, `blockingReasons` deve conter fallback explícito apontando para `executionEvidence` e logs
+  - `executionEvidence.msBuildExitCode` é o local canônico do código bruto retornado pela task `MSBuild`; `msBuildExitCode` top-level, quando existir por compatibilidade, deve duplicar esse valor e não deve ser usado como padrão novo
+  - `observedContext.MsBuildExitCode`, quando existir em wrappers da família build, é contexto observado/compatibilidade e não substitui `executionEvidence.msBuildExitCode` como fonte canônica
+  - em falha de pós-processamento do wrapper, o diagnóstico degradado deve preservar `executionEvidence` com os dados brutos já coletados antes da falha
+- `postProcessingFailed` / `postProcessingError`
+  - `postProcessingFailed=true` sinaliza falha local do wrapper depois que o `MSBuild` já rodou, como parse de stdout, montagem do diagnóstico, serialização JSON ou gravação do log
+  - `postProcessingError` deve carregar a mensagem curta da falha local quando disponível
+  - em exportação, `postProcessingFailed=true` pode aparecer sem `diagnosticDegraded`; nessa família, o sub-estado é decidido por `executionEvidence`, marcas do log bruto e existência do XPZ gerado
+- `diagnosticDegraded` / `diagnosticDegradedReason`
+  - `diagnosticDegraded` (booleano) sinaliza que o pós-processamento local do wrapper ficou parcial ou falhou após o `MSBuild` já ter concluído; `diagnosticDegradedReason` (string) carrega a causa textual curta
+  - hoje contratado e emitido em `scripts/Invoke-GeneXusXpzImport.ps1` e `scripts/Test-GeneXusXpzImportPreview.ps1`; o contrato completo de resiliência do pós-processamento está em `xpz-msbuild-import-export/SKILL.md`
+  - `diagnosticDegraded=true` pode coexistir com `postProcessingFailed=false`, por exemplo quando a task concluiu e o diagnóstico principal foi montado, mas a leitura compacta de `msbuild.import.signals.json` falhou ou ficou parcial
+  - semântica: **não** reclassifica a task `MSBuild` — a evidência primária de conclusão da task permanece em `executionEvidence` e nos marcadores do log bruto (`__IMPORTED_ITEM__`, `__EXPORTED_FILE__`)
+  - quando `diagnosticDegraded=true` coexistir com `executionEvidence.msBuildExitCode=0` e evidência de marca no log bruto, o sub-estado correto é `concluído com diagnóstico degradado` ou o sub-estado mais específico definido pela skill consumidora; não é `falha operacional` por si só
+- `observedContext`
+  - registra contexto técnico observado pelo wrapper, como versão ativa, `Environment` ativo, `OpenOutput`, `pathEnrichment` e, em wrappers de build, campos legados como `MsBuildExitCode`
+  - `observedContext.pathEnrichment` registra o enriquecimento preventivo de `PATH` (`applied`, `subdirsAdded`, `subdirsSkipped`) quando o wrapper aplica essa política
 
 ### Contrato Inicial De `Test-GeneXusMsBuildSetup.ps1`
 
@@ -777,7 +817,7 @@ Formato esperado do diagnóstico estruturado:
     - confirmação de que `WorkingDirectory` está fora de `C:\Program Files (x86)`
     - confirmação de que `LogPath` está fora de `C:\Program Files (x86)`
 - `blockingReasons`
-  - lista explícita dos motivos que impediram prosseguir, quando houver
+  - lista explícita dos motivos acionáveis que impediram prosseguir, quando houver
 - `warnings`
   - lista de alertas não bloqueantes, quando houver
 - `strategyTrace`
@@ -1086,3 +1126,57 @@ Testado em execução real em 2026-05-10 na KB `wsEducacaoSpTeste`:
 - exportação sem `-VersionName` → sucesso; `GetActiveVersion` confirmou `"wsEducacaoSpTeste"` como identificador ativo
 
 Conclusão: `GetVersionProperty -Name Name` retorna propriedade de metadados descritiva da versão, não o identificador aceito por `SetActiveVersion`. Para posicionar versão antes de exportação ou importação, usar `GetActiveVersion` como fonte do identificador — nunca `GetVersionProperty -Name Name`.
+
+## Achado Empírico Sobre Subdirs Do GeneXus E PATH Em Headless
+
+Tasks internas do MSBuild GeneXus invocam binários auxiliares (`gxexec`, `UpdConfigWeb`, `BuildService`, `Reor.exe`) por nome, sem caminho absoluto, esperando que o `$env:PATH` do processo já contenha os subdirs do install. A IDE GeneXus aplica esse enriquecimento implicitamente; um MSBuild lançado por wrapper externo (Claude Code, CI sem ambiente do GeneXus, qualquer orquestrador) herda apenas o `PATH` do shell do agente, que tipicamente não inclui esses subdirs.
+
+### Sintoma
+
+Build headless cuja KB atinja fases que invoquem essas tools falha com mensagens genéricas:
+
+- `error : O sistema não pode encontrar o arquivo especificado`
+- `error : Não foi possível executar o comando 'gxexec ...'. Não foi possível encontrar uma parte do caminho.` (.NET Framework — expõe o nome do binário)
+- `> DeveloperMenu Compilação para Default (.NET Framework) falhou`
+- `> Build All Task falhou`
+
+Em environments .NET Core a mensagem é mais opaca porque a task `BuildAll` usa `CaptureOutput="true"` e a `Process.Start` interna falha sem propagar o nome do binário.
+
+### Subdirs relevantes do GeneXus 18
+
+Sob `C:\Program Files (x86)\GeneXus\GeneXus18\`:
+
+- `GeneXus18\` (raiz) — `GeneXus.exe` e outros
+- `gxnet\` — `GXExec.exe`, `UpdConfigWeb.exe`, `BuildService.exe`, `VirtualDir.exe` (.NET Framework)
+- `gxnet\bin\` — `GxConfig.exe`, `GXDataInitialization.exe`, `GxSetFrm.exe`, `Reor.exe`, `Runx86.exe`
+- `gxnetcore\` — `UpdConfigWeb.exe`, `BuildService.exe`, `VirtualDir.exe` (.NET Core)
+
+A política da skill mantém `C:\Program Files (x86)` estritamente somente leitura; ler para incluir subdirs no `PATH` do processo é compatível com essa política, pois não escreve nada.
+
+### Política dos wrappers
+
+Os wrappers da família `xpz-msbuild-build` (`Invoke-GeneXusKbBuildAll.ps1` e `Invoke-GeneXusKbSpecifyGenerate.ps1`) enriquecem `$env:PATH` automaticamente após resolver `$resolvedGeneXusDir` e antes de invocar o MSBuild. O enriquecimento usa lista fixa dos quatro subdirs conhecidos, filtrada por `Test-Path` para tolerar instalações não-padrão. Subdirs ausentes são reportados em `warnings[]` e em `observedContext.pathEnrichment.subdirsSkipped` do JSON de resultado.
+
+Os wrappers da família `xpz-msbuild-import-export` (`Test-GeneXusXpzImportPreview.ps1`, `Invoke-GeneXusXpzImport.ps1` e `Invoke-GeneXusXpzExport.ps1`) aplicam o mesmo enriquecimento preventivo do `PATH` e registram o resultado em `observedContext.pathEnrichment`. A justificativa aqui é simetria e consistência do ambiente headless, não reprodução de falha em import/export puro.
+
+### Evidência empírica (FabricaBrasil18, 2026-05-20)
+
+Reprodução com `Invoke-GeneXusKbBuildAll.ps1` em `.Net Environment` (.NET Framework), GeneXus 18 Up 14:
+
+| Rodada | PATH | Status | exit | MsBuildExitCode | BuildAllDone | Duração | Mensagem chave |
+|---|---|---|---|---|---|---|---|
+| 1d (baseline) | default (sem GeneXus) | `compilou com erros` | 45 | 1 | false | 90 s | `gxexec ... Não foi possível encontrar uma parte do caminho` |
+| 2 (manual) | enriquecido pelo invocador | `compilou limpo` | 0 | 0 | true | 261 s | (sem erro) |
+| 3 (pós-fix) | enriquecido pelo próprio wrapper | `compilou limpo` | 0 | 0 | true | (idem) | (sem erro) |
+
+Artefatos preservados em `Temp\xpz-build-verify-path-20260520-r1d\` e `Temp\xpz-build-verify-path-20260520-r2\`.
+
+### Evidência empírica complementar (OnlineShopSS, 2026-05-20)
+
+Em `C:\KBs\OnlineShopSS`, uma importação real de alteração estrutural simples em atributo (`ShoppingCartItemQuantity`, `Length`/`AttMaxLen` 4→5) concluiu sem enriquecimento manual de `PATH`, com `importedItems` contendo o atributo esperado e sem sinais de `Database Impact Analysis`, `Reorganization`, `bldReorganization`, `gxexec`, `UpdConfigWeb`, `BuildService`, `Reor.exe` ou erro de resolução de caminho no stdout. A importação real inversa (5→4) também concluiu com sucesso quando o invocador enriqueceu manualmente o `PATH` antes da chamada.
+
+Conclusão limitada: import/export puro não demonstrou dependência observável desses subdirs na rodada testada. O enriquecimento nos wrappers de `xpz-msbuild-import-export` permanece como defesa preventiva e alinhamento com o ambiente esperado pela IDE, enquanto a necessidade provada empiricamente continua pertencendo aos fluxos de build/specify/generate que atingem fases internas dependentes desses executáveis auxiliares.
+
+### Observação sobre cobertura empírica anterior
+
+A matriz 2×2 documentada em `xpz-msbuild-build/SKILL.md` (coleta de 2026-05-12) registra builds limpos em FabricaBrasil18/NETPostgreSQL sem PATH enriquecido. Hipótese de reconciliação: aqueles builds anteriores não atingiam a fase `Atualização de configuração da web` (a KB estava em estado que não disparava a fase). O sintoma é condicional à fase ser atingida, não universal a toda chamada headless. Mantida a matriz histórica como evidência do estado da KB naquela data.

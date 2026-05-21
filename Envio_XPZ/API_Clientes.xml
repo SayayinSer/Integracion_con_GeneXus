@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExportFile>
+  <KMW><MajorVersion>4</MajorVersion><MinorVersion>0</MinorVersion><Build>177934</Build></KMW>
+  <Objects>
+    <!-- SDT: Cliente_SDT -->
+    <Object fullyQualifiedName="Cliente_SDT" guid="9f1ed3b5-1f1b-479f-9f02-00c381bd9fa9" name="Cliente_SDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Recupera Informacion Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="Cliente_SDT">
+          <LevelInfo guid="4c478ff1-cf3d-44c6-94a4-8449baf8cd87" name="Cliente_SDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Cliente_SDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>Cliente_SDT</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="5a1f6cbc-ff35-4298-b364-968b28db0333" name="ClienteCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Cliente Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="4aaa6274-6eb8-49c3-a584-c66159e137fc" name="ClienteNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Cliente Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties>
+          </Item>
+          <Item guid="2b0708e7-57b6-4d3b-b63d-edc4d0e580a9" name="ZonaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Codigo" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ZonaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="e5395321-194c-4014-b8dd-a31aa54f504b" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Categoria Codigo" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="340b6fde-9542-4411-87d3-452de57d1c51" name="ExisteSioNo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Existe Sio No" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ExisteSioNo</Value></Property><Property><Name>idBasedOn</Name><Value>Domain:SioNo</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Cliente_SDT</Value></Property><Property><Name>Description</Name><Value>Recupera Informacion Cliente</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- SDT: ClienteListaSDT -->
+    <Object fullyQualifiedName="ClienteListaSDT" guid="6d01800c-b534-4e67-a839-3239dd33c04f" name="ClienteListaSDT" type="447527b5-9210-4523-898b-5dccb17be60a" description="Lista de Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="5c2aa9da-8fc4-4b6b-ae02-8db4fa48976a">
+        <Level Name="ClienteListaSDT">
+          <LevelInfo guid="a620e631-be96-4c48-b046-42f710d84e08" name="ClienteListaSDT" type="a76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="ClienteListaSDT" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ClienteListaSDT</Value></Property><Property><Name>AttCollection</Name><Value>True</Value></Property></Properties>
+          </LevelInfo>
+          <Item guid="f14ab4ca-fc9b-484d-b320-9edea7483933" name="ClienteCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Cliente Id" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="975a920e-6ee6-4f90-b091-c0ccc8ce9be9" name="ClienteNombre" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Cliente Nombre" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties>
+          </Item>
+          <Item guid="27dc9d98-c456-43b7-b446-c02b6bacb91e" name="ZonaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Zona Codigo" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>ZonaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties>
+          </Item>
+          <Item guid="22f3d270-3284-4f00-a674-c700d9740ca3" name="CategoriaCodigo" type="f76e9340-bdb9-445d-8f81-cfd4ddd0b0f3" description="Categoria Codigo" user="FACTORIAGX\Sergio">
+            <Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties>
+          </Item>
+        </Level>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="babf62c5-0111-49e9-a1c3-cc004d90900a">
+        <Properties />
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>ClienteListaSDT</Value></Property><Property><Name>Description</Name><Value>Lista de Cliente</Value></Property><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+    </Object>
+
+    <!-- Proc: Cliente_Insertar -->
+    <Object fullyQualifiedName="Cliente_Insertar" guid="3ebb61ee-6e06-49f0-b40d-c0a7eadd18be" name="Cliente_Insertar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Insertar Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Cliente.ClienteNombre = &ClienteNombre
+&Cliente.ZonaCodigo = &ZonaCodigo
+&Cliente.CategoriaCodigo = &CategoriaCodigo
+&Cliente.Insert()
+if &Cliente.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Cliente.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Cliente"><Properties><Property><Name>Name</Name><Value>Cliente</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Cliente</Value></Property></Properties></Variable>
+        <Variable Name="ClienteNombre"><Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties></Variable>
+        <Variable Name="ZonaCodigo"><Properties><Property><Name>Name</Name><Value>ZonaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <!-- Proc: Cliente_Modificar -->
+    <Object fullyQualifiedName="Cliente_Modificar" guid="3a753e1c-f4ca-42c5-9ca5-a95bd1fa8abe" name="Cliente_Modificar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Modificar Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Cliente.Load(&ClienteCodigo)
+&Cliente.ClienteNombre = &ClienteNombre
+&Cliente.ZonaCodigo = &ZonaCodigo
+&Cliente.CategoriaCodigo = &CategoriaCodigo
+&Cliente.Update()
+if &Cliente.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Cliente.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&ClienteCodigo, in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Cliente"><Properties><Property><Name>Name</Name><Value>Cliente</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Cliente</Value></Property></Properties></Variable>
+        <Variable Name="ClienteCodigo"><Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties></Variable>
+        <Variable Name="ClienteNombre"><Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties></Variable>
+        <Variable Name="ZonaCodigo"><Properties><Property><Name>Name</Name><Value>ZonaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <!-- Proc: Cliente_Borrar -->
+    <Object fullyQualifiedName="Cliente_Borrar" guid="7e3e4c08-9a92-41a4-b73f-645e535edeb6" name="Cliente_Borrar" type="84a12160-f59b-4ad7-a683-ea4481ac23e9" description="Borrar Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="528d1c06-a9c2-420d-bd35-21dca83f12ff">
+        <Source><![CDATA[&Cliente.Load(&ClienteCodigo)
+&Cliente.Delete()
+if &Cliente.Success()
+    commit
+else
+    rollback
+endif
+&Messages = &Cliente.GetMessages()]]></Source>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(in:&ClienteCodigo, out:&Messages);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="Cliente"><Properties><Property><Name>Name</Name><Value>Cliente</Value></Property><Property><Name>idIsAutoDefinedVariable</Name><Value>True</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>bc:Cliente</Value></Property></Properties></Variable>
+        <Variable Name="ClienteCodigo"><Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+
+    <Object fullyQualifiedName="Cliente_DP" guid="6329fdb1-0c24-4bc6-ad3c-63ce6d452fe0" name="Cliente_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[Cliente_SDT From Cliente where ClienteCodigo = &ClienteCodigo
+{
+    ClienteCodigo
+    ClienteNombre
+    ZonaCodigo
+    CategoriaCodigo
+    ExisteSioNo = SioNo.Si
+}
+Cliente_SDT [Default]
+{
+    ExisteSioNo = SioNo.No
+}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&ClienteCodigo);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ClienteCodigo"><Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>Cliente_DP</Value></Property><Property><Name>Description</Name><Value>DP Cliente</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-Cliente_SDT</Value></Property></Properties>
+    </Object>
+
+    <Object fullyQualifiedName="ClienteLista_DP" guid="3cb24e35-d6e9-484e-8e88-9e56bd22b361" name="ClienteLista_DP" type="2a9e9aba-d2de-4801-ae7f-5e3819222daf" description="DP Lista Cliente" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="1d8aeb5a-6e98-45a7-92d2-d8de7384e432">
+        <Source><![CDATA[ClienteListaSDT From Cliente
+Order ClienteNombre
+Where ClienteNombre like &ClienteNombre when Not &ClienteNombre.IsEmpty()
+{
+    ClienteCodigo
+    ClienteNombre
+    ZonaCodigo
+    CategoriaCodigo
+}]]></Source>
+        <Properties><Property><Name>IsDefault</Name><Value>False</Value></Property></Properties>
+      </Part>
+      <Part type="9b0a32a3-de6d-4be1-a4dd-1b85d3741534">
+        <Source><![CDATA[parm(&ClienteNombre);]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ClienteNombre"><Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties></Variable>
+      </Part>
+      <Properties><Property><Name>Name</Name><Value>ClienteLista_DP</Value></Property><Property><Name>Description</Name><Value>DP Lista Cliente</Value></Property><Property><Name>OutputSDT</Name><Value>447527b5-9210-4523-898b-5dccb17be60a-ClienteListaSDT</Value></Property></Properties>
+    </Object>
+
+    <!-- API: API_Clientes -->
+    <Object fullyQualifiedName="API_Clientes" guid="b510b0c3-fe4a-4f20-8fac-3afd81747686" name="API_Clientes" type="36e32e2d-023e-4188-95df-d13573bac2e0" description="API Clientes" parentGuid="739a892b-5720-447c-ae75-b9c7ebe36275" moduleGuid="afa47377-41d5-4ae8-9755-6f53150aa361">
+      <Part type="9f577ec2-27f4-4cf4-8ad5-f3f50c9d69b5">
+        <Source><![CDATA[APIClientes
+{
+    [RestMethod(GET)] [Path("/api/clientes")] Listar(in:&ClienteNombre, out:&ClienteListaSDT) => ClienteLista_DP(in:&ClienteNombre, out:&ClienteListaSDT);
+    [RestMethod(GET)] [Path("/api/clientes/{ClienteCodigo}")] Buscar(in:&ClienteCodigo, out:&Cliente_SDT) => Cliente_DP(in:&ClienteCodigo, out:&Cliente_SDT);
+    [RestMethod(POST)] [Path("/api/clientes")] Insertar(in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages) => Cliente_Insertar(in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages);
+    [RestMethod(PUT)] [Path("/api/clientes/{ClienteCodigo}")] Modificar(in:&ClienteCodigo, in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages) => Cliente_Modificar(in:&ClienteCodigo, in:&ClienteNombre, in:&ZonaCodigo, in:&CategoriaCodigo, out:&Messages);
+    [RestMethod(DELETE)] [Path("/api/clientes/{ClienteCodigo}")] Borrar(in:&ClienteCodigo, out:&Messages) => Cliente_Borrar(in:&ClienteCodigo, out:&Messages);
+}]]></Source>
+      </Part>
+      <Part type="c44bd5ff-f918-415b-98e6-aca44fed84fa">
+        <Source><![CDATA[]]></Source>
+      </Part>
+      <Part type="e4c4ade7-53f0-4a56-bdfd-843735b66f47">
+        <Variable Name="ClienteCodigo"><Properties><Property><Name>Name</Name><Value>ClienteCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteCodigo</Value></Property></Properties></Variable>
+        <Variable Name="ClienteNombre"><Properties><Property><Name>Name</Name><Value>ClienteNombre</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ClienteNombre</Value></Property></Properties></Variable>
+        <Variable Name="ZonaCodigo"><Properties><Property><Name>Name</Name><Value>ZonaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:ZonaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="CategoriaCodigo"><Properties><Property><Name>Name</Name><Value>CategoriaCodigo</Value></Property><Property><Name>idBasedOn</Name><Value>Attribute:CategoriaCodigo</Value></Property></Properties></Variable>
+        <Variable Name="Messages"><Properties><Property><Name>Name</Name><Value>Messages</Value></Property><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Messages, GeneXus.Common</Value></Property></Properties></Variable>
+        <Variable Name="Cliente_SDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:Cliente_SDT</Value></Property></Properties></Variable>
+        <Variable Name="ClienteListaSDT"><Properties><Property><Name>ATTCUSTOMTYPE</Name><Value>sdt:ClienteListaSDT</Value></Property></Properties></Variable>
+      </Part>
+    </Object>
+  </Objects>
+</ExportFile>
